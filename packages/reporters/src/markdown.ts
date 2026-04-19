@@ -27,8 +27,14 @@ export function renderMarkdownReport(result: FinalAnalysisResult): string {
     lines.push('- None');
   } else {
     for (const finding of result.findings) {
-      lines.push(`- [${finding.severity}] ${finding.title}`);
+      lines.push(`- [${finding.severity}] ${finding.title} (score ${finding.score})`);
       lines.push(`  - ${finding.summary}`);
+      if (finding.evidence.length > 0) {
+        lines.push(`  - Evidence: ${finding.evidence.join('; ')}`);
+      }
+      if (finding.policySource) {
+        lines.push(`  - Policy: ${finding.policySource}`);
+      }
       lines.push(`  - Recommendation: ${finding.recommendation}`);
     }
   }

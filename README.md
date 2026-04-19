@@ -54,6 +54,25 @@ corepack pnpm explain -- npm react@19.1.0
 corepack pnpm init-policy
 ```
 
+## GitHub Action wrapper
+
+The local GitHub Action lives in `apps/github-action` and wraps the core analyzer without adding any network calls.
+
+- Action metadata: `apps/github-action/action.yml`
+- Action bundle entrypoint: `apps/github-action/dist/index.js`
+- Source wrapper: `apps/github-action/src/index.ts`
+- Action-specific docs: `apps/github-action/README.md`
+
+The action exposes these outputs:
+
+- `json`
+- `markdown`
+- `decision`
+- `score`
+- `exit-code-recommendation`
+
+See `.github/workflows/ci-release.yml` for a minimal example that runs the local action and prepares the release-oriented npm package flow.
+
 ## npm-packable CLI package
 
 The publishable npm unit lives in `apps/cli` as `dradar`.
@@ -115,9 +134,9 @@ Implemented now:
 - Provider layer with deterministic fallback
 - CLI output contract with explicit format options
 - Initial tests and docs
+- GitHub Action wrapper with outputs and release-prep workflow
 
 Still pending:
 
 - Full scoring and policy enforcement expansion
 - MCP server implementation
-- GitHub Action wrapper

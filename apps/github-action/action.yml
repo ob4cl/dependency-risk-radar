@@ -1,0 +1,41 @@
+name: Dependency Risk Radar
+description: Local-first dependency change analysis for GitHub repositories.
+inputs:
+  repo:
+    description: Repository path to analyze.
+    required: false
+    default: .
+  base:
+    description: Base git ref or commit SHA.
+    required: false
+  head:
+    description: Head git ref or commit SHA.
+    required: false
+  policy:
+    description: Optional policy file path.
+    required: false
+  format:
+    description: Output format for logs.
+    required: false
+    default: both
+  live-metadata:
+    description: Enable live provider-backed metadata enrichment.
+    required: false
+    default: 'false'
+outputs:
+  json:
+    description: Serialized JSON analysis report.
+  markdown:
+    description: Markdown analysis report.
+  decision:
+    description: Final policy decision.
+  score:
+    description: Total risk score.
+  exit-code-recommendation:
+    description: Recommended exit code for the analysis result.
+runs:
+  using: node20
+  main: dist/index.js
+branding:
+  icon: shield
+  color: gray-dark

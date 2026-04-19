@@ -1,0 +1,97 @@
+name: CI and release prep
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: corepack enable && pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+  action-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: corepack enable && pnpm install --frozen-lockfile
+
+      - name: Build action bundle
+        run: pnpm --filter @drr/github-action build
+
+      - name: Run Dependency Risk Radar action
+        id: radar
+        uses: ./apps/github-action
+        with:
+          repo: .
+          base: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before || github.sha }}
+          head: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          format: markdown
+          live-metadata: false
+
+      - name: Show action outputs
+        run: |
+          echo "decision=${{ steps.radar.outputs.decision }}"
+          echo "score=${{ steps.radar.outputs.score }}"
+          echo "exit-code-recommendation=${{ steps.radar.outputs.exit-code-recommendation }}"
+
+  release-prep:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: corepack enable && pnpm install --frozen-lockfile
+
+      - name: Build GitHub Action bundle
+        run: pnpm --filter @drr/github-action build
+
+      - name: Prepare npm package
+        run: cd apps/cli && npm pack --dry-run --json

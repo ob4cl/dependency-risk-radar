@@ -8,9 +8,9 @@ const policySchema = z.object({
     pnpm: z.object({ enabled: z.boolean().default(true) }).default({ enabled: true }),
   }).default({ npm: { enabled: true }, pnpm: { enabled: true } }),
   thresholds: z.object({
-    block_score: z.number().int().default(70),
-    warn_score: z.number().int().default(40),
-  }).default({ block_score: 70, warn_score: 40 }),
+    block_score: z.number().int().min(0).default(70),
+    warn_score: z.number().int().min(0).default(25),
+  }).default({ block_score: 70, warn_score: 25 }),
   policies: z.object({
     block_known_critical_vulns: z.boolean().default(true),
     require_lockfile: z.boolean().default(true),
@@ -49,7 +49,7 @@ export const defaultPolicyConfig: PolicyConfig = {
   },
   thresholds: {
     block_score: 70,
-    warn_score: 40,
+    warn_score: 25,
   },
   policies: {
     block_known_critical_vulns: true,
@@ -59,6 +59,10 @@ export const defaultPolicyConfig: PolicyConfig = {
   licenses: { deny: [] },
   packages: { deny: [] },
 };
+
+function normalizeEntries(values: string[]): string[] {
+  return Array.from(new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))).sort((left, right) => left.localeCompare(right));
+}
 
 export function parsePolicyYaml(text: string): PolicyConfig {
   let raw: unknown;
@@ -71,7 +75,11 @@ export function parsePolicyYaml(text: string): PolicyConfig {
   if (!parsed.success) {
     throw new PolicyValidationError('Invalid policy configuration', { issues: parsed.error.issues });
   }
-  return parsed.data as PolicyConfig;
+  return {
+    ...parsed.data,
+    packages: { deny: normalizeEntries(parsed.data.packages.deny) },
+    licenses: { deny: normalizeEntries(parsed.data.licenses.deny) },
+  } as PolicyConfig;
 }
 
 export function policyToScoringConfig(policy: PolicyConfig) {
@@ -87,8 +95,8 @@ export function policyToScoringConfig(policy: PolicyConfig) {
       maintenanceTrust: 15,
       policy: 10,
     },
-    deniedPackages: policy.packages.deny,
-    deniedLicenses: policy.licenses.deny,
+    deniedPackages: [...policy.packages.deny],
+    deniedLicenses: [...policy.licenses.deny],
     requireInstallScriptReview: policy.policies.require_manual_review_for_install_scripts,
   };
 }

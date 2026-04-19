@@ -14,7 +14,7 @@ function buildStarterPolicy(): string {
     '',
     'thresholds:',
     '  block_score: 70',
-    '  warn_score: 40',
+    '  warn_score: 25',
     '',
     'policies:',
     '  block_known_critical_vulns: true',
