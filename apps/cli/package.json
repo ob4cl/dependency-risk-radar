@@ -7,11 +7,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ob4cl/dradar.git"
+    "url": "https://github.com/ob4cl/dependency-risk-radar.git"
   },
-  "homepage": "https://github.com/ob4cl/dradar#readme",
+  "homepage": "https://github.com/ob4cl/dependency-risk-radar#readme",
   "bugs": {
-    "url": "https://github.com/ob4cl/dradar/issues"
+    "url": "https://github.com/ob4cl/dependency-risk-radar/issues"
   },
   "keywords": [
     "dependency",
