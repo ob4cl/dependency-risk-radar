@@ -267,6 +267,91 @@ If policy path is missing/unreadable/invalid, analysis fails (no silent fallback
 4. Keep policy file versioned in repo
 5. Review policy changes via normal PR review process
 
+## Architecture (high level)
+
+```text
+PR / commit refs (base, head)
+            |
+            v
+      Dependency delta engine
+   (manifest + lockfile parsing)
+            |
+            v
+   Optional metadata/vuln providers
+      (npm registry, OSV API)
+            |
+            v
+      Policy + scoring engine
+ (thresholds, deny lists, critical block)
+            |
+            v
+   Outputs: JSON + Markdown + decision
+            |
+            v
+   CLI / GitHub Action / MCP consumers
+```
+
+Design goals:
+
+- deterministic core analysis first
+- optional live enrichment second
+- explicit policy controls for final decision
+- machine + human outputs from same run artifact
+
+## Operational runbook (DevOps)
+
+Use this as the standard on-call / release-engineering procedure.
+
+1. Baseline check
+   - run analyzer against current PR/base pair
+   - capture `decision`, `score`, and top findings
+2. If decision is `pass`
+   - merge allowed under policy
+3. If decision is `warn`
+   - reviewer acknowledges findings in PR
+   - merge may proceed with normal approval path
+4. If decision is `high-risk`
+   - require security/platform approval
+   - document exception or mitigation in PR thread
+5. If decision is `fail`
+   - block merge
+   - require dependency change, policy correction, or explicit security waiver process
+
+Suggested escalation matrix:
+
+- `warn`: service owner + reviewer
+- `high-risk`: service owner + platform/security approver
+- `fail`: security sign-off required before unblocking
+
+## Policy governance examples
+
+### Example A: strict production policy
+
+- `warn_score: 20`
+- `block_score: 50`
+- `block_known_critical_vulns: true`
+- deny risky licenses and known-problematic packages
+
+Best for: internet-facing services, regulated workloads.
+
+### Example B: balanced platform policy
+
+- `warn_score: 30`
+- `block_score: 70`
+- critical vuln blocking enabled
+- install-script review required
+
+Best for: most internal services.
+
+### Example C: migration window policy (temporary)
+
+- keep critical blocking enabled
+- raise `warn_score`/`block_score` temporarily
+- require issue/ticket link in PR for every override
+- set explicit expiry date for relaxed policy
+
+Best for: large dependency modernization waves.
+
 ## Local release validation
 
 From repo root:
