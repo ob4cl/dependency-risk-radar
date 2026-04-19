@@ -46,6 +46,16 @@ Inspect a generated tarball with:
 tar -tf dradar-0.1.1.tgz
 ```
 
+## Release flow
+
+The package-level release helper scripts live here:
+
+- `npm run release:check` (build + pack dry-run)
+- `npm run release:publish`
+- `npm run release:version:patch`
+- `npm run release:version:minor`
+- `npm run release:version:major`
+
 ## Publish checklist
 
 Before the first real publish, make sure all of these are true:

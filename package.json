@@ -11,7 +11,10 @@
     "analyze": "tsx apps/cli/src/cli.ts analyze",
     "review-pr": "tsx apps/cli/src/cli.ts review-pr",
     "init-policy": "tsx apps/cli/src/cli.ts init-policy",
-    "explain": "tsx apps/cli/src/cli.ts explain"
+    "explain": "tsx apps/cli/src/cli.ts explain",
+    "release:check": "corepack pnpm build && corepack pnpm test && corepack pnpm --dir apps/cli run release:check",
+    "release:pack": "corepack pnpm --dir apps/cli run pack:dry-run",
+    "release:publish": "corepack pnpm --dir apps/cli run release:publish"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.0",

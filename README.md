@@ -95,6 +95,21 @@ The publishable package is intended to ship `dist/` only. Before a real registry
 
 For the package-level release checklist, see `apps/cli/README.md`.
 
+## Release flow
+
+The recommended release loop is:
+
+```bash
+cd apps/cli
+npm version patch --no-git-tag-version
+cd ../..
+corepack pnpm release:check
+corepack pnpm release:pack
+corepack pnpm release:publish
+```
+
+For a checklist and rationale, see `docs/release-flow.md`.
+
 ## Publishing prerequisites
 
 Before you publish to npm, line up the registry-side details first:

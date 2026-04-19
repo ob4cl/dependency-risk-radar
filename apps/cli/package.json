@@ -17,7 +17,13 @@
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepack": "node ./scripts/build.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "pack:dry-run": "npm pack --dry-run --json",
+    "release:check": "npm run build && npm run pack:dry-run",
+    "release:publish": "npm publish --access public",
+    "release:version:patch": "npm version patch --no-git-tag-version",
+    "release:version:minor": "npm version minor --no-git-tag-version",
+    "release:version:major": "npm version major --no-git-tag-version"
   },
   "dependencies": {
     "@drr/core": "workspace:*",
