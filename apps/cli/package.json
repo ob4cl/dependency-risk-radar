@@ -1,14 +1,21 @@
 {
   "name": "@drr/cli",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "type": "module",
   "bin": {
-    "radar": "./src/cli.ts"
+    "radar": "./dist/cli.js"
   },
-  "main": "./src/cli.ts",
-  "types": "./src/cli.ts",
+  "main": "./dist/cli.js",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "prepack": "node ./scripts/build.mjs",
     "test": "vitest run"
   },
   "dependencies": {
@@ -16,5 +23,8 @@
     "@drr/policy": "workspace:*",
     "@drr/reporters": "workspace:*",
     "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.27.7"
   }
 }
