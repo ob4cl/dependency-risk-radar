@@ -1,42 +1,52 @@
 # Dependency Risk Radar
 
-Dependency Risk Radar is a local-first dependency risk analyzer for pull-request and branch comparisons.
+Dependency Risk Radar helps senior DevOps and platform teams answer one question before merge:
 
-It compares two Git refs, inspects manifest + lockfile dependency changes, scores risk, and returns machine-readable JSON plus review-friendly Markdown.
+"Will this dependency change increase supply-chain risk beyond policy?"
 
-## What the tool does
+It is a deterministic, local-first gate for dependency changes in JavaScript/TypeScript repos.
 
-- Analyzes dependency changes between `base` and `head` refs
-- Supports npm and pnpm lockfile formats
-- Scores risk using policy-driven thresholds and controls
-- Produces deterministic JSON output for automation
-- Produces Markdown summaries for review workflows
-- Provides:
-  - CLI (`radar`)
-  - MCP server
-  - GitHub Action wrapper
+## Why this exists
+
+Most dependency checks are either noisy, opaque, or too late in the pipeline.
+Dependency Risk Radar focuses on practical pre-merge decisions:
+
+- compare `base` vs `head`
+- identify dependency deltas from manifest + lockfile
+- score risk with explicit policy thresholds
+- produce machine-readable JSON and review-ready Markdown
+
+No dashboards. No hidden scoring logic. No cloud lock-in.
+
+## Built for DevOps teams
+
+- Deterministic output for CI gates and audit trails
+- Policy-driven decisions (`warn_score`, `block_score`, critical vuln block)
+- Strict filesystem trust boundaries for repo/policy paths
+- Clear pass/warn/high-risk/fail recommendations
+- Easy to run in CLI, GitHub Action, or MCP workflows
 
 ## Supported ecosystems
 
 - npm (`package-lock.json`)
 - pnpm (`pnpm-lock.yaml`)
 
-## Current limitations
+## Current limitations (v1)
 
-- JavaScript/TypeScript dependency workflows only (no Python/Rust/Java support yet)
-- No dashboard or backend service
+- JavaScript/TypeScript dependency workflows only
 - No SBOM export
-- No automatic package remediation
+- No automated remediation
+- No multi-ecosystem support (Python/Rust/Java not yet supported)
 
-## Installation
+## Install
 
-Published package:
+Global install:
 
 ```bash
 npm install -g dradar
 ```
 
-Local workspace development:
+Local development:
 
 ```bash
 corepack enable
@@ -45,7 +55,7 @@ corepack pnpm build
 corepack pnpm test
 ```
 
-## CLI usage
+## CLI quick start
 
 Analyze dependency changes:
 
@@ -53,36 +63,25 @@ Analyze dependency changes:
 radar analyze --repo . --base main --head HEAD
 ```
 
-Render markdown only:
+PR-style review output:
 
 ```bash
 radar review-pr --repo . --base main --head HEAD --format markdown
 ```
 
-Use explicit policy file:
+Use explicit policy:
 
 ```bash
 radar analyze --repo . --base main --head HEAD --policy ./dependency-risk-radar.yaml
 ```
 
-Initialize a starter policy:
+Generate starter policy:
 
 ```bash
 radar init-policy --out ./dependency-risk-radar.yaml
 ```
 
-## MCP usage
-
-MCP server package: `apps/mcp-server`
-
-Exposed tools:
-
-- `analyze_dependency_diff`
-- `explain_package_risk`
-- `review_pull_request_dependencies`
-- `generate_policy_file`
-
-## Policy file example
+## Policy example
 
 ```yaml
 ecosystems:
@@ -110,11 +109,22 @@ packages:
     - example-banned-package
 ```
 
-## GitHub Action
+## MCP usage
 
-Local action path: `apps/github-action`
+MCP server lives in `apps/mcp-server`.
 
-Action outputs:
+Exposed tools:
+
+- `analyze_dependency_diff`
+- `explain_package_risk`
+- `review_pull_request_dependencies`
+- `generate_policy_file`
+
+## GitHub Action usage
+
+Local action wrapper lives in `apps/github-action`.
+
+Outputs:
 
 - `json`
 - `markdown`
@@ -124,10 +134,12 @@ Action outputs:
 
 ## Security disclosures
 
-Please report vulnerabilities privately (do not open public issues for security reports).
-See `SECURITY.md`.
+Do not report vulnerabilities in public issues.
+
+Please follow `SECURITY.md` for private disclosure.
 
 ## Release status
 
-This repository is in pre-1.0 hardening mode for first public release.
-Core security boundaries, packaging validation, and release workflows are in place; additional ecosystem support is planned post-1.0.
+Pre-1.0, release-hardening complete for first public publication.
+
+If you want the full release checklist and local verification commands, see `RELEASE_READINESS.md`.
