@@ -56,7 +56,7 @@ corepack pnpm init-policy
 
 ## npm-packable CLI package
 
-The publishable npm unit lives in `apps/cli` as `dependency-risk-radar`.
+The publishable npm unit lives in `apps/cli` as `dradar`.
 
 Today the workspace is set up for local execution and packaging inspection. The package can be packed from the CLI folder, and `npm pack` is the right way to verify what would ship.
 

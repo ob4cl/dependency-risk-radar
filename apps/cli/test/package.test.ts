@@ -90,10 +90,10 @@ describe('apps/cli packaging', () => {
 
     const packedFiles = packInfo.files.map((file) => file.path).sort();
 
-    expect(packInfo.id).toBe('dependency-risk-radar@0.1.0');
-    expect(packInfo.name).toBe('dependency-risk-radar');
+    expect(packInfo.id).toBe('dradar@0.1.0');
+    expect(packInfo.name).toBe('dradar');
     expect(packInfo.version).toBe('0.1.0');
-    expect(packInfo.filename).toBe('dependency-risk-radar-0.1.0.tgz');
+    expect(packInfo.filename).toBe('dradar-0.1.0.tgz');
     expect(packInfo.entryCount).toBe(4);
     expect(packedFiles).toEqual(['README.md', 'bin/radar', 'dist/cli.js', 'package.json']);
     expect(packedFiles).not.toContain('src/cli.ts');

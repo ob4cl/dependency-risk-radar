@@ -1,8 +1,8 @@
-# @drr/cli
+# dradar
 
 `apps/cli` is the npm-packable CLI package for Dependency Risk Radar.
 
-Package name today: `dependency-risk-radar`
+Package name today: `dradar`
 Binary name: `radar`
 
 ## Local dev
@@ -43,7 +43,7 @@ The publish build is designed to ship `dist/` only. Before a real publish, verif
 Inspect a generated tarball with:
 
 ```bash
-tar -tf drr-cli-0.1.0.tgz
+tar -tf dradar-0.1.0.tgz
 ```
 
 ## Publish checklist

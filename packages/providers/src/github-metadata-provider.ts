@@ -21,7 +21,7 @@ export class GitHubRepositoryMetadataProvider implements PackageMetadataProvider
     const response = await fetch(`https://api.github.com/repos/${slug.owner}/${slug.repo}`, {
       headers: {
         accept: 'application/vnd.github+json',
-        'user-agent': 'dependency-risk-radar',
+        'user-agent': 'dradar',
       },
       signal: AbortSignal.timeout(this.timeoutMs),
     }).catch(() => null);
