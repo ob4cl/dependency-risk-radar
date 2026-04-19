@@ -1,13 +1,14 @@
 {
-  "name": "@drr/cli",
+  "name": "dependency-risk-radar",
   "version": "0.1.0",
   "private": false,
   "type": "module",
-  "bin": {
-    "radar": "./dist/cli.js"
+  "directories": {
+    "bin": "bin"
   },
   "main": "./dist/cli.js",
   "files": [
+    "bin",
     "dist"
   ],
   "publishConfig": {

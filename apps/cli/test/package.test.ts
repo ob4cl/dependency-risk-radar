@@ -90,25 +90,24 @@ describe('apps/cli packaging', () => {
 
     const packedFiles = packInfo.files.map((file) => file.path).sort();
 
-    expect(packInfo.id).toBe('@drr/cli@0.1.0');
-    expect(packInfo.name).toBe('@drr/cli');
+    expect(packInfo.id).toBe('dependency-risk-radar@0.1.0');
+    expect(packInfo.name).toBe('dependency-risk-radar');
     expect(packInfo.version).toBe('0.1.0');
-    expect(packInfo.filename).toBe('drr-cli-0.1.0.tgz');
-    expect(packInfo.entryCount).toBe(3);
-    expect(packedFiles).toEqual(['README.md', 'dist/cli.js', 'package.json']);
+    expect(packInfo.filename).toBe('dependency-risk-radar-0.1.0.tgz');
+    expect(packInfo.entryCount).toBe(4);
+    expect(packedFiles).toEqual(['README.md', 'bin/radar', 'dist/cli.js', 'package.json']);
     expect(packedFiles).not.toContain('src/cli.ts');
     expect(packedFiles).not.toContain('test/cli.integration.test.ts');
   }, 20000);
 
   it('points the CLI bin at the built JavaScript entrypoint', () => {
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
-      bin: { radar?: string };
+      directories: { bin: string };
       main: string;
     };
 
-    expect(packageJson.bin['radar']).toBe('./dist/cli.js');
+    expect(packageJson.directories.bin).toBe('bin');
     expect(packageJson.main).toBe('./dist/cli.js');
-    expect(packageJson.bin['radar']?.endsWith('.ts')).toBe(false);
     expect(packageJson.main.endsWith('.ts')).toBe(false);
   });
 });

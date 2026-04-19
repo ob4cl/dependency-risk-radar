@@ -2,7 +2,7 @@
 
 `apps/cli` is the npm-packable CLI package for Dependency Risk Radar.
 
-Package name today: `@drr/cli`
+Package name today: `dependency-risk-radar`
 Binary name: `radar`
 
 ## Local dev
