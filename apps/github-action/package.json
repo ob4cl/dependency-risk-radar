@@ -10,7 +10,8 @@
     "prepack": "corepack pnpm build"
   },
   "dependencies": {
-    "@drr/core": "workspace:*"
+    "@drr/core": "workspace:*",
+    "@drr/shared": "workspace:*"
   },
   "devDependencies": {
     "esbuild": "0.27.7"

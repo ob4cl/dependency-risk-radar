@@ -15,6 +15,7 @@ export interface ScoringPolicy {
   deniedPackages: string[];
   deniedLicenses: string[];
   requireInstallScriptReview: boolean;
+  blockKnownCriticalVulns: boolean;
 }
 
 const WARN_SCORE = 25;
@@ -57,6 +58,13 @@ function severityFromVulnerabilities(vulnerabilities: Array<Record<string, unkno
   return vulnerabilities.length > 0 ? 'medium' : 'info';
 }
 
+function hasCriticalVulnerability(vulnerabilities: Array<Record<string, unknown>>): boolean {
+  return vulnerabilities.some((entry) => {
+    const severity = entry['severity'];
+    return typeof severity === 'string' && severity.trim().toLowerCase() === 'critical';
+  });
+}
+
 function decisionFromScore(score: number, policy: ScoringPolicy): Decision {
   if (score >= policy.thresholds.failScore) return 'fail';
   if (score >= HIGH_RISK_SCORE) return 'high-risk';
@@ -94,6 +102,7 @@ export const defaultScoringPolicy: ScoringPolicy = {
   deniedPackages: [],
   deniedLicenses: [],
   requireInstallScriptReview: true,
+  blockKnownCriticalVulns: true,
 };
 
 export function scoreDependencyChanges(changes: NormalizedDependencyChange[], policy = defaultScoringPolicy): ScoreResult {
@@ -104,6 +113,7 @@ export function scoreDependencyChanges(changes: NormalizedDependencyChange[], po
   };
   const findings: RiskFinding[] = [];
   let totalScore = 0;
+  let hasBlockingCriticalVulnerability = false;
 
   for (const change of changes) {
     const extra = getMetadataExtra(change);
@@ -115,6 +125,7 @@ export function scoreDependencyChanges(changes: NormalizedDependencyChange[], po
       || change.metadata.hasPrepareScript,
     );
     const vulnerabilityEntries = getVulnerabilityEntries(extra);
+    const criticalVulnerability = hasCriticalVulnerability(vulnerabilityEntries);
     const hasBlastRadius = typeof change.transitiveCountDelta === 'number' && Math.abs(change.transitiveCountDelta) >= 10;
     const blockedPackage = normalizedPolicy.deniedPackages.includes(change.name.trim());
     const packageLicense = change.metadata.license?.trim() ?? null;
@@ -145,6 +156,9 @@ export function scoreDependencyChanges(changes: NormalizedDependencyChange[], po
         direct: change.direct,
       });
       totalScore += normalizedPolicy.weights.vulnerability;
+      if (criticalVulnerability && normalizedPolicy.blockKnownCriticalVulns) {
+        hasBlockingCriticalVulnerability = true;
+      }
     }
 
     if (installScript && normalizedPolicy.requireInstallScriptReview) {
@@ -262,7 +276,7 @@ export function scoreDependencyChanges(changes: NormalizedDependencyChange[], po
     mediumFindings: counts.medium,
     lowFindings: counts.low,
     totalRiskScore: Math.min(100, totalScore),
-    decision: decisionFromScore(totalScore, normalizedPolicy),
+    decision: hasBlockingCriticalVulnerability ? 'fail' : decisionFromScore(totalScore, normalizedPolicy),
   };
 
   return { findings, summary };

@@ -8,6 +8,7 @@ thresholds:
   block_score: 70
   warn_score: 40
 policies:
+  block_known_critical_vulns: false
   require_manual_review_for_install_scripts: true
 licenses:
   deny:
@@ -20,8 +21,10 @@ packages:
 describe('parsePolicyYaml', () => {
   it('normalizes policy config', () => {
     const parsed = parsePolicyYaml(policy);
+    const scoring = policyToScoringConfig(parsed);
     expect(parsed.packages.deny).toContain('bad-package');
-    expect(policyToScoringConfig(parsed).deniedLicenses).toContain('GPL-3.0');
-    expect(policyToScoringConfig(parsed).thresholds.warnScore).toBe(25);
+    expect(scoring.deniedLicenses).toContain('GPL-3.0');
+    expect(scoring.thresholds.warnScore).toBe(40);
+    expect(scoring.blockKnownCriticalVulns).toBe(false);
   });
 });

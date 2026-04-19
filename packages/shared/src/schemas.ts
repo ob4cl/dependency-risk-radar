@@ -92,4 +92,6 @@ export const analysisInputSchema = z.object({
   headRef: z.string().min(1),
   policyPath: z.string().nullable().optional(),
   liveMetadata: z.boolean().optional(),
+  allowedWorkspaceRoot: z.string().nullable().optional(),
+  allowedConfigRoot: z.string().nullable().optional(),
 });

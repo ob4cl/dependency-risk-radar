@@ -1,17 +1,39 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AnalysisInput, FinalAnalysisResult } from '@drr/shared';
-import { MissingLockfileError, InvalidReferenceError } from '@drr/shared';
+import { MissingLockfileError, InvalidReferenceError, PolicyValidationError } from '@drr/shared';
+import { assertDirectoryWithinRoots, assertFileWithinRoots, PathUnreadableError } from '@drr/shared';
 import { parsePackageJson, parseLockfile, generateDependencyDelta } from '@drr/parsers';
 import { parsePolicyYaml, defaultPolicyConfig, policyToScoringConfig } from '@drr/policy';
 import { scoreDependencyChanges } from '@drr/scoring';
 import { renderJsonReport, renderMarkdownReport } from '@drr/reporters';
-import { createLiveProviderBundle, createOfflineProviderBundle, enrichDependencyChanges } from '../../providers/src/index';
+import { createLiveProviderBundle, enrichDependencyChanges } from '@drr/providers';
 
 interface ResolvedRepoFiles {
   manifestPath: string;
   lockfilePath: string | null;
+}
+
+function resolveWorkspaceRoot(input: AnalysisInput): string {
+  const workspaceRoot = input.allowedWorkspaceRoot ?? process.env['DRR_WORKSPACE_ROOT'] ?? process.cwd();
+  return assertDirectoryWithinRoots({
+    kind: 'workspaceRoot',
+    path: workspaceRoot,
+    allowedRoots: [workspaceRoot],
+  });
+}
+
+function resolveConfigRoot(input: AnalysisInput, workspaceRoot: string, repoPath: string): string {
+  if (!input.allowedConfigRoot) {
+    return repoPath;
+  }
+
+  return assertDirectoryWithinRoots({
+    kind: 'configRoot',
+    path: input.allowedConfigRoot,
+    allowedRoots: [workspaceRoot],
+  });
 }
 
 function gitShow(repoPath: string, ref: string, filePath: string): string {
@@ -58,18 +80,49 @@ function safeParseLockfile(repoPath: string, ref: string, lockfilePath: string |
   return parseLockfile(text, join(repoPath, lockfilePath));
 }
 
-export async function analyzeRepository(input: AnalysisInput): Promise<FinalAnalysisResult> {
-  const baseFiles = resolveFiles(input.repoPath, input.baseRef);
-  const headFiles = resolveFiles(input.repoPath, input.headRef);
-  const baseManifest = safeParseManifest(input.repoPath, input.baseRef);
-  const headManifest = safeParseManifest(input.repoPath, input.headRef);
-  const lockfilePath = headFiles.lockfilePath ?? baseFiles.lockfilePath;
-  if (!lockfilePath && !baseFiles.lockfilePath && !headFiles.lockfilePath) {
-    throw new MissingLockfileError(input.repoPath);
+function loadPolicy(input: AnalysisInput, repoPath: string, configRoot: string) {
+  if (!input.policyPath) {
+    return defaultPolicyConfig;
   }
 
-  const baseLockfile = safeParseLockfile(input.repoPath, input.baseRef, baseFiles.lockfilePath ?? lockfilePath);
-  const headLockfile = safeParseLockfile(input.repoPath, input.headRef, headFiles.lockfilePath ?? lockfilePath);
+  const policyPath = assertFileWithinRoots({
+    kind: 'policyPath',
+    path: input.policyPath,
+    allowedRoots: [repoPath, configRoot],
+  });
+
+  try {
+    return parsePolicyYaml(readFileSync(policyPath, 'utf8'));
+  } catch (error) {
+    if (error instanceof PolicyValidationError) {
+      throw error;
+    }
+    if (error instanceof PathUnreadableError) {
+      throw error;
+    }
+    throw new PathUnreadableError(policyPath, { kind: 'policyPath', error: error instanceof Error ? error.message : String(error) });
+  }
+}
+
+export async function analyzeRepository(input: AnalysisInput): Promise<FinalAnalysisResult> {
+  const workspaceRoot = resolveWorkspaceRoot(input);
+  const repoPath = assertDirectoryWithinRoots({
+    kind: 'repoPath',
+    path: input.repoPath,
+    allowedRoots: [workspaceRoot],
+  });
+  const configRoot = resolveConfigRoot(input, workspaceRoot, repoPath);
+  const baseFiles = resolveFiles(repoPath, input.baseRef);
+  const headFiles = resolveFiles(repoPath, input.headRef);
+  const baseManifest = safeParseManifest(repoPath, input.baseRef);
+  const headManifest = safeParseManifest(repoPath, input.headRef);
+  const lockfilePath = headFiles.lockfilePath ?? baseFiles.lockfilePath;
+  if (!lockfilePath && !baseFiles.lockfilePath && !headFiles.lockfilePath) {
+    throw new MissingLockfileError(repoPath);
+  }
+
+  const baseLockfile = safeParseLockfile(repoPath, input.baseRef, baseFiles.lockfilePath ?? lockfilePath);
+  const headLockfile = safeParseLockfile(repoPath, input.headRef, headFiles.lockfilePath ?? lockfilePath);
 
   let dependencyChanges = generateDependencyDelta({
     base: { manifest: baseManifest, lockfile: baseLockfile },
@@ -80,18 +133,15 @@ export async function analyzeRepository(input: AnalysisInput): Promise<FinalAnal
     dependencyChanges = await enrichDependencyChanges(dependencyChanges, createLiveProviderBundle());
   }
 
-  const policy = input.policyPath && existsSync(input.policyPath)
-    ? parsePolicyYaml(readFileSync(input.policyPath, 'utf8'))
-    : defaultPolicyConfig;
-
+  const policy = loadPolicy(input, repoPath, configRoot);
   const scoringConfig = policyToScoringConfig(policy);
   const scoreResult = scoreDependencyChanges(dependencyChanges, scoringConfig);
   const result: FinalAnalysisResult = {
     analysisVersion: '0.1.0',
-    repoPath: input.repoPath,
+    repoPath,
     baseRef: input.baseRef,
     headRef: input.headRef,
-    generatedAt: new Date('2026-04-19T00:00:00.000Z').toISOString(),
+    generatedAt: new Date().toISOString(),
     summary: scoreResult.summary,
     dependencyChanges,
     findings: scoreResult.findings,

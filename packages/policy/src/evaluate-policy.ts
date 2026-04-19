@@ -42,6 +42,24 @@ export interface PolicyConfig {
   packages: { deny: string[] };
 }
 
+export interface ScoringConfig {
+  thresholds: {
+    warnScore: number;
+    failScore: number;
+  };
+  weights: {
+    vulnerability: number;
+    installTimeExecution: number;
+    blastRadius: number;
+    maintenanceTrust: number;
+    policy: number;
+  };
+  deniedPackages: string[];
+  deniedLicenses: string[];
+  requireInstallScriptReview: boolean;
+  blockKnownCriticalVulns: boolean;
+}
+
 export const defaultPolicyConfig: PolicyConfig = {
   ecosystems: {
     npm: { enabled: true },
@@ -82,10 +100,10 @@ export function parsePolicyYaml(text: string): PolicyConfig {
   } as PolicyConfig;
 }
 
-export function policyToScoringConfig(policy: PolicyConfig) {
+export function policyToScoringConfig(policy: PolicyConfig): ScoringConfig {
   return {
     thresholds: {
-      warnScore: 25,
+      warnScore: policy.thresholds.warn_score,
       failScore: policy.thresholds.block_score,
     },
     weights: {
@@ -98,5 +116,6 @@ export function policyToScoringConfig(policy: PolicyConfig) {
     deniedPackages: [...policy.packages.deny],
     deniedLicenses: [...policy.licenses.deny],
     requireInstallScriptReview: policy.policies.require_manual_review_for_install_scripts,
+    blockKnownCriticalVulns: policy.policies.block_known_critical_vulns,
   };
 }

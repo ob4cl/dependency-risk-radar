@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync, rmSync } from 'node:fs';
+import { readFileSync, readdirSync, rmSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -58,14 +59,14 @@ describe('apps/cli packaging', () => {
   it('builds a deterministic dist tree', () => {
     buildPackage();
     const firstHash = collectTreeHash(distDir);
-    const firstBundle = readFileSync(join(distDir, 'cli.js'), 'utf8');
+    const firstBundle = readFileSync(join(distDir, 'cli.cjs'), 'utf8');
 
     buildPackage();
     const secondHash = collectTreeHash(distDir);
 
     expect(firstBundle.startsWith('#!/usr/bin/env node')).toBe(true);
     expect(firstHash).toBe(secondHash);
-    expect(readdirSync(distDir).sort()).toEqual(['cli.js']);
+    expect(readdirSync(distDir).sort()).toEqual(['cli.cjs']);
   }, 20000);
 
   it('packs the built entrypoint and package metadata', () => {
@@ -96,19 +97,48 @@ describe('apps/cli packaging', () => {
     expect(packInfo.version).toBe(packageJson.version);
     expect(packInfo.filename).toBe(`dradar-${packageJson.version}.tgz`);
     expect(packInfo.entryCount).toBe(4);
-    expect(packedFiles).toEqual(['README.md', 'bin/radar', 'dist/cli.js', 'package.json']);
+    expect(packedFiles).toEqual(['README.md', 'bin/radar', 'dist/cli.cjs', 'package.json']);
     expect(packedFiles).not.toContain('src/cli.ts');
     expect(packedFiles).not.toContain('test/cli.integration.test.ts');
   }, 20000);
 
+  it('installs and runs from the packed tarball in a clean temp directory', () => {
+    buildPackage();
+
+    const packResult = run('npm', ['pack'], packageRoot);
+    expect(packResult.status, packResult.stderr || packResult.stdout).toBe(0);
+
+    const tarballLines = packResult.stdout.trim().split(/\r?\n/).filter((line) => line.trim().length > 0);
+    const tarball = tarballLines[tarballLines.length - 1];
+    if (!tarball) {
+      throw new Error('Expected npm pack to output a tarball filename');
+    }
+
+    const installRoot = mkdtempSync(join(tmpdir(), 'drr-pack-install-'));
+    const initResult = run('npm', ['init', '-y'], installRoot);
+    expect(initResult.status, initResult.stderr || initResult.stdout).toBe(0);
+
+    const installResult = run('npm', ['install', join(packageRoot, tarball)], installRoot);
+    expect(installResult.status, installResult.stderr || installResult.stdout).toBe(0);
+
+    const helpResult = run('npx', ['--yes', 'radar', '--help'], installRoot);
+    expect(helpResult.status, helpResult.stderr || helpResult.stdout).toBe(0);
+    expect(helpResult.stdout).toContain('Dependency Risk Radar');
+
+    rmSync(join(packageRoot, tarball), { force: true });
+    rmSync(installRoot, { recursive: true, force: true });
+  }, 30000);
+
   it('points the CLI bin at the built JavaScript entrypoint', () => {
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
-      directories: { bin: string };
+      bin: Record<string, string>;
       main: string;
+      dependencies?: Record<string, string>;
     };
 
-    expect(packageJson.directories.bin).toBe('bin');
-    expect(packageJson.main).toBe('./dist/cli.js');
+    expect(packageJson.bin).toEqual({ radar: './bin/radar' });
+    expect(packageJson.main).toBe('./dist/cli.cjs');
     expect(packageJson.main.endsWith('.ts')).toBe(false);
+    expect(packageJson.dependencies).toEqual({ commander: '^12.1.0' });
   });
 });

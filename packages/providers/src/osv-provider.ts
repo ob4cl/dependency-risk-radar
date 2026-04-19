@@ -6,11 +6,78 @@ function mapEcosystem(ecosystem: ProviderEcosystem): 'npm' {
   return 'npm';
 }
 
+function severityFromNumericScore(score: number): ProviderVulnerability['severity'] {
+  if (score >= 9) return 'critical';
+  if (score >= 7) return 'high';
+  if (score >= 4) return 'moderate';
+  if (score > 0) return 'low';
+  return 'unknown';
+}
+
+function normalizeSeverityLabel(value: unknown): ProviderVulnerability['severity'] {
+  if (typeof value !== 'string') {
+    return 'unknown';
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'critical') return 'critical';
+  if (normalized === 'high') return 'high';
+  if (normalized === 'moderate' || normalized === 'medium') return 'moderate';
+  if (normalized === 'low') return 'low';
+  return 'unknown';
+}
+
+function normalizeSeverityEntry(entry: unknown): ProviderVulnerability['severity'] {
+  if (typeof entry === 'string') {
+    return normalizeSeverityLabel(entry);
+  }
+
+  if (Array.isArray(entry)) {
+    for (const nested of entry) {
+      const severity = normalizeSeverityEntry(nested);
+      if (severity !== 'unknown') {
+        return severity;
+      }
+    }
+    return 'unknown';
+  }
+
+  if (!entry || typeof entry !== 'object') {
+    return 'unknown';
+  }
+
+  const record = entry as Record<string, unknown>;
+  const directFields = [record['severity'], record['type'], record['score'], record['value']];
+  for (const field of directFields) {
+    const normalized = normalizeSeverityEntry(field);
+    if (normalized !== 'unknown') {
+      return normalized;
+    }
+    if (typeof field === 'string') {
+      const numeric = Number(field);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        return severityFromNumericScore(numeric);
+      }
+    }
+  }
+
+  return 'unknown';
+}
+
 function normalizeSeverity(value: unknown): ProviderVulnerability['severity'] {
-  if (value === 'CRITICAL') return 'critical';
-  if (value === 'HIGH') return 'high';
-  if (value === 'MODERATE' || value === 'MEDIUM') return 'moderate';
-  if (value === 'LOW') return 'low';
+  const severity = normalizeSeverityEntry(value);
+  if (severity !== 'unknown') {
+    return severity;
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const candidate = normalizeSeverityEntry(entry);
+      if (candidate !== 'unknown') {
+        return candidate;
+      }
+    }
+  }
+
   return 'unknown';
 }
 
@@ -62,7 +129,7 @@ export class OsvVulnerabilityProvider implements VulnerabilityProvider {
           id: typeof vuln['id'] === 'string' ? vuln['id'] : `${packageName}@${version ?? 'latest'}`,
           summary: typeof vuln['summary'] === 'string' ? vuln['summary'] : 'Vulnerability metadata unavailable',
           details: typeof vuln['details'] === 'string' ? vuln['details'] : null,
-          severity: normalizeSeverity(Array.isArray(vuln['severity']) && vuln['severity'][0] && typeof vuln['severity'][0] === 'object' ? (vuln['severity'][0] as Record<string, unknown>)['type'] : vuln['severity']),
+          severity: normalizeSeverity(vuln['severity']),
           aliases,
           references,
           packageName,

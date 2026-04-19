@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { scoreDependencyChanges } from '@drr/scoring';
 import type { NormalizedDependencyChange } from '@drr/shared';
 
-const change: NormalizedDependencyChange = {
+const baseChange: NormalizedDependencyChange = {
   ecosystem: 'npm',
   name: 'bad-package',
   changeType: 'upgraded',
@@ -22,16 +22,43 @@ const change: NormalizedDependencyChange = {
 
 describe('scoreDependencyChanges', () => {
   it('creates deterministic findings for install script, blast radius, and policy risk', () => {
-    const result = scoreDependencyChanges([change], {
+    const result = scoreDependencyChanges([baseChange], {
       thresholds: { warnScore: 25, failScore: 70 },
       weights: { vulnerability: 40, installTimeExecution: 20, blastRadius: 15, maintenanceTrust: 15, policy: 10 },
       deniedPackages: ['bad-package'],
       deniedLicenses: ['GPL-3.0'],
       requireInstallScriptReview: true,
+      blockKnownCriticalVulns: false,
     });
 
     expect(result.findings).toHaveLength(4);
     expect(result.summary.totalRiskScore).toBe(55);
     expect(result.summary.decision).toBe('high-risk');
+  });
+
+  it('fails closed when a critical vulnerability is present and policy blocks it', () => {
+    const result = scoreDependencyChanges([
+      {
+        ...baseChange,
+        name: 'critical-package',
+        metadata: {
+          ...baseChange.metadata,
+          extra: {
+            metadataSource: 'npm',
+            vulnerabilities: [{ id: 'osv-1', severity: 'critical', summary: 'Critical issue' }],
+          },
+        },
+      },
+    ], {
+      thresholds: { warnScore: 25, failScore: 70 },
+      weights: { vulnerability: 40, installTimeExecution: 20, blastRadius: 15, maintenanceTrust: 15, policy: 10 },
+      deniedPackages: [],
+      deniedLicenses: [],
+      requireInstallScriptReview: false,
+      blockKnownCriticalVulns: true,
+    });
+
+    expect(result.findings.some((finding) => finding.category === 'known-vulnerability')).toBe(true);
+    expect(result.summary.decision).toBe('fail');
   });
 });

@@ -93,4 +93,6 @@ export interface AnalysisInput {
   headRef: string;
   policyPath?: string | null;
   liveMetadata?: boolean;
+  allowedWorkspaceRoot?: string | null;
+  allowedConfigRoot?: string | null;
 }

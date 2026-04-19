@@ -48,6 +48,7 @@ export class NpmRegistryMetadataProvider implements PackageMetadataProvider {
       homepage: typeof versionEntry['homepage'] === 'string' ? versionEntry['homepage'] : null,
       description: typeof versionEntry['description'] === 'string' ? versionEntry['description'] : null,
       source: 'npm',
+      raw: versionEntry,
     };
     this.cache.set(cacheKey, metadata);
     return metadata;

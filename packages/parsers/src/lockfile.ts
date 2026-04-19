@@ -7,7 +7,7 @@ export interface LockfilePackageNode {
   id: string;
   name: string;
   version: string;
-  dependencies: string[];
+  dependencies: Record<string, string>;
   hasInstallScript: boolean;
   nativeBuild: boolean;
   license: string | null;
@@ -26,7 +26,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
 }
 
-function toStringMap(value: unknown): Record<string, string> {
+function toDependencyMap(value: unknown): Record<string, string> {
   const record = asRecord(value);
   if (!record) return {};
 
@@ -49,8 +49,32 @@ function toStringMap(value: unknown): Record<string, string> {
   return result;
 }
 
-function toDependenciesList(value: unknown): string[] {
-  return Object.keys(toStringMap(value));
+function packageLockNameFromId(id: string, entry: Record<string, unknown>): string {
+  if (typeof entry['name'] === 'string' && entry['name'].trim().length > 0) {
+    return entry['name'].trim();
+  }
+  const segments = id.split('/').filter(Boolean);
+  const nodeModulesIndex = segments.lastIndexOf('node_modules');
+  const packageSegments = nodeModulesIndex >= 0 ? segments.slice(nodeModulesIndex + 1) : segments;
+  if (packageSegments.length === 0) {
+    return id;
+  }
+  if (packageSegments[0]?.startsWith('@') && packageSegments.length >= 2) {
+    return `${packageSegments[0]}/${packageSegments[1]}`;
+  }
+  return packageSegments[packageSegments.length - 1] ?? id;
+}
+
+function pnpmNameAndVersionFromId(id: string): { name: string; version: string } {
+  const normalized = id.startsWith('/') ? id.slice(1) : id;
+  const atIndex = normalized.lastIndexOf('@');
+  if (atIndex <= 0) {
+    return { name: normalized, version: '0.0.0' };
+  }
+  return {
+    name: normalized.slice(0, atIndex),
+    version: normalized.slice(atIndex + 1),
+  };
 }
 
 function parsePackageLock(text: string, path: string): ParsedLockfile {
@@ -67,21 +91,18 @@ function parsePackageLock(text: string, path: string): ParsedLockfile {
   const packages = new Map<string, LockfilePackageNode>();
   const packageEntries = asRecord(data['packages']) ?? {};
   const rootEntry = asRecord(packageEntries['']) ?? undefined;
-  const rootDependencies = toStringMap(rootEntry?.['dependencies'] ?? data['dependencies']);
+  const rootDependencies = toDependencyMap(rootEntry?.['dependencies'] ?? data['dependencies']);
 
   for (const [id, raw] of Object.entries(packageEntries)) {
     if (id === '') continue;
     const entry = asRecord(raw);
     if (!entry) continue;
 
-    const pathParts = id.split('/').filter(Boolean);
-    const name = typeof entry['name'] === 'string' ? entry['name'] : pathParts[pathParts.length - 1] ?? id;
-    const version = typeof entry['version'] === 'string' ? entry['version'] : '0.0.0';
     packages.set(id, {
       id,
-      name,
-      version,
-      dependencies: toDependenciesList(entry['dependencies']),
+      name: packageLockNameFromId(id, entry),
+      version: typeof entry['version'] === 'string' ? entry['version'] : '0.0.0',
+      dependencies: toDependencyMap(entry['dependencies']),
       hasInstallScript: Boolean(entry['hasInstallScript']),
       nativeBuild: Boolean(entry['gypfile']) || Boolean(entry['hasInstallScript']),
       license: typeof entry['license'] === 'string' ? entry['license'] : null,
@@ -117,9 +138,9 @@ function parsePnpmLock(text: string, path: string): ParsedLockfile {
     const entry = asRecord(raw);
     if (!entry) continue;
     importers.set(importerPath, {
-      ...toStringMap(entry['dependencies']),
-      ...toStringMap(entry['devDependencies']),
-      ...toStringMap(entry['optionalDependencies']),
+      ...toDependencyMap(entry['dependencies']),
+      ...toDependencyMap(entry['devDependencies']),
+      ...toDependencyMap(entry['optionalDependencies']),
     });
   }
 
@@ -128,15 +149,12 @@ function parsePnpmLock(text: string, path: string): ParsedLockfile {
     const entry = asRecord(raw);
     if (!entry) continue;
 
-    const normalized = id.startsWith('/') ? id.slice(1) : id;
-    const atIndex = normalized.lastIndexOf('@');
-    const name = atIndex > 0 ? normalized.slice(0, atIndex) : normalized;
-    const version = atIndex > 0 ? normalized.slice(atIndex + 1) : '0.0.0';
+    const { name, version } = pnpmNameAndVersionFromId(id);
     packages.set(id, {
       id,
       name,
       version,
-      dependencies: toDependenciesList(entry['dependencies']),
+      dependencies: toDependencyMap(entry['dependencies']),
       hasInstallScript: Boolean(entry['hasInstallScript']),
       nativeBuild: Boolean(entry['hasBin']) || Boolean(entry['hasInstallScript']),
       license: typeof entry['license'] === 'string' ? entry['license'] : null,

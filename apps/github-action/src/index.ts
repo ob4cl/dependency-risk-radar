@@ -1,7 +1,7 @@
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { analyzeRepository, serializeAnalysis } from '../../../packages/core/src/index';
-import type { AnalysisInput, FinalAnalysisResult } from '../../../packages/shared/src/types';
+import { analyzeRepository, serializeAnalysis } from '@drr/core';
+import type { AnalysisInput, FinalAnalysisResult } from '@drr/shared';
 
 export type ActionOutputFormat = 'json' | 'markdown' | 'both';
 
@@ -54,8 +54,11 @@ function parseGitHubEvent(): Record<string, unknown> | null {
   return parsed;
 }
 
-function resolveRepoPath(input: string | undefined): string {
-  const workspace = process.env['GITHUB_WORKSPACE'] ?? process.cwd();
+function resolveWorkspaceRoot(): string {
+  return resolve(process.env['GITHUB_WORKSPACE'] ?? process.cwd());
+}
+
+function resolveRepoPath(input: string | undefined, workspace: string): string {
   return resolve(workspace, input ?? '.');
 }
 
@@ -100,13 +103,16 @@ function resolveInputRef(name: 'base' | 'head', fallbackEvent: Record<string, un
 
 export function readActionInputs(partial: Partial<ActionInputs> = {}): ActionInputs {
   const event = parseGitHubEvent();
+  const workspaceRoot = resolveWorkspaceRoot();
   return {
-    repoPath: resolveRepoPath(partial.repoPath ?? readInput('repo')),
+    repoPath: resolveRepoPath(partial.repoPath ?? readInput('repo'), workspaceRoot),
     baseRef: resolveInputRef('base', event, partial.baseRef ?? readInput('base')),
     headRef: resolveInputRef('head', event, partial.headRef ?? readInput('head')),
     policyPath: partial.policyPath ?? readInput('policy') ?? null,
     format: normalizeFormat(partial.format ?? readInput('format')),
     liveMetadata: typeof partial.liveMetadata === 'boolean' ? partial.liveMetadata : readBooleanInput('live-metadata', false),
+    allowedWorkspaceRoot: partial.allowedWorkspaceRoot ?? workspaceRoot,
+    allowedConfigRoot: partial.allowedConfigRoot ?? workspaceRoot,
   };
 }
 
@@ -127,18 +133,13 @@ function writeStepSummary(markdown: string): void {
   appendFileSync(summaryPath, `${markdown}\n`, 'utf8');
 }
 
-function writeStdout(format: ActionOutputFormat, json: string, markdown: string): void {
-  if (format === 'json') {
-    process.stdout.write(json);
-    return;
-  }
-  if (format === 'markdown') {
-    process.stdout.write(markdown);
-    return;
-  }
-  process.stdout.write(json);
-  process.stdout.write('\n');
-  process.stdout.write(markdown);
+function sanitizeWorkflowCommands(text: string): string {
+  return text.replace(/::/g, '%3A%3A');
+}
+
+function writeConciseLog(result: FinalAnalysisResult): void {
+  const line = `Dependency Risk Radar: decision=${result.summary.decision} score=${result.summary.totalRiskScore}`;
+  process.stdout.write(`${sanitizeWorkflowCommands(line)}\n`);
 }
 
 export async function runAction(partialInputs?: Partial<ActionInputs>): Promise<FinalAnalysisResult> {
@@ -154,6 +155,12 @@ export async function runAction(partialInputs?: Partial<ActionInputs>): Promise<
   if (typeof inputs.policyPath === 'string' && inputs.policyPath.length > 0) {
     analysisInput.policyPath = inputs.policyPath;
   }
+  if (typeof inputs.allowedWorkspaceRoot === 'string' && inputs.allowedWorkspaceRoot.length > 0) {
+    analysisInput.allowedWorkspaceRoot = inputs.allowedWorkspaceRoot;
+  }
+  if (typeof inputs.allowedConfigRoot === 'string' && inputs.allowedConfigRoot.length > 0) {
+    analysisInput.allowedConfigRoot = inputs.allowedConfigRoot;
+  }
   const result = await analyzeRepository(analysisInput);
 
   const { json, markdown } = serializeAnalysis(result);
@@ -163,7 +170,7 @@ export async function runAction(partialInputs?: Partial<ActionInputs>): Promise<
   writeOutput('score', String(result.summary.totalRiskScore));
   writeOutput('exit-code-recommendation', String(result.exitCodeRecommendation));
   writeStepSummary(markdown);
-  writeStdout(inputs.format, json, markdown);
+  writeConciseLog(result);
   return result;
 }
 
@@ -176,7 +183,7 @@ async function main(): Promise<void> {
     const result = await runAction();
     process.exitCode = result.exitCodeRecommendation;
   } catch (error) {
-    process.stderr.write(`${formatError(error)}\n`);
+    process.stderr.write(`${sanitizeWorkflowCommands(formatError(error))}\n`);
     process.exitCode = 1;
   }
 }

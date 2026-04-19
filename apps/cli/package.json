@@ -2,11 +2,31 @@
   "name": "dradar",
   "version": "0.1.1",
   "private": false,
+  "description": "Dependency Risk Radar CLI for dependency-change risk analysis.",
   "type": "module",
-  "directories": {
-    "bin": "bin"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ob4cl/dradar.git"
   },
-  "main": "./dist/cli.js",
+  "homepage": "https://github.com/ob4cl/dradar#readme",
+  "bugs": {
+    "url": "https://github.com/ob4cl/dradar/issues"
+  },
+  "keywords": [
+    "dependency",
+    "security",
+    "risk",
+    "supply-chain",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/cli.cjs",
+  "bin": {
+    "radar": "./bin/radar"
+  },
   "files": [
     "bin",
     "dist"
@@ -26,9 +46,6 @@
     "release:version:major": "npm version major --no-git-tag-version"
   },
   "dependencies": {
-    "@drr/core": "workspace:*",
-    "@drr/policy": "workspace:*",
-    "@drr/reporters": "workspace:*",
     "commander": "^12.1.0"
   },
   "devDependencies": {

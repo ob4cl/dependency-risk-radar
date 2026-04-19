@@ -50,18 +50,64 @@ function dependencySpec(manifest: ParsedManifest, name: string): string | null {
   return manifest.dependencies[name] ?? null;
 }
 
-function findNodeByName(lockfile: ParsedLockfile, name: string): LockfilePackageNode | null {
-  const candidates = Array.from(lockfile.packages.values()).filter((node) => node.name === name);
-  if (candidates.length === 0) return null;
-  candidates.sort((left, right) => stableCompare(left.id, right.id));
-  return candidates[0] ?? null;
+function packageNodesByName(lockfile: ParsedLockfile, name: string): LockfilePackageNode[] {
+  return Array.from(lockfile.packages.values()).filter((node) => node.name === name);
+}
+
+function chooseNode(nodes: LockfilePackageNode[], parentId?: string, dependencyVersion?: string | null): LockfilePackageNode | null {
+  if (nodes.length === 0) {
+    return null;
+  }
+
+  const expectedVersion = normalizeVersion(dependencyVersion);
+  if (expectedVersion) {
+    const versionMatches = nodes.filter((node) => normalizeVersion(node.version) === expectedVersion);
+    if (versionMatches.length === 1) {
+      return versionMatches[0] ?? null;
+    }
+    if (versionMatches.length > 1) {
+      versionMatches.sort((left, right) => stableCompare(left.id, right.id));
+      return versionMatches[0] ?? null;
+    }
+  }
+
+  if (parentId) {
+    const exactPathMatches = nodes.filter((node) => node.id.startsWith(`${parentId}/node_modules/`));
+    if (exactPathMatches.length > 0) {
+      exactPathMatches.sort((left, right) => stableCompare(left.id, right.id));
+      return exactPathMatches[0] ?? null;
+    }
+  }
+
+  const rootMatches = nodes.filter((node) => node.id.startsWith('node_modules/'));
+  if (rootMatches.length > 0) {
+    rootMatches.sort((left, right) => stableCompare(left.id, right.id));
+    return rootMatches[0] ?? null;
+  }
+
+  const sorted = [...nodes].sort((left, right) => stableCompare(left.id, right.id));
+  return sorted[0] ?? null;
+}
+
+function resolveNode(lockfile: ParsedLockfile, name: string, dependencyVersion?: string | null, parentId?: string): LockfilePackageNode | null {
+  const exactIds = parentId ? [`${parentId}/node_modules/${name}`, `node_modules/${name}`] : [`node_modules/${name}`];
+  for (const id of exactIds) {
+    const exact = lockfile.packages.get(id);
+    if (exact && exact.name === name) {
+      if (!dependencyVersion || normalizeVersion(exact.version) === normalizeVersion(dependencyVersion)) {
+        return exact;
+      }
+    }
+  }
+
+  return chooseNode(packageNodesByName(lockfile, name), parentId, dependencyVersion);
 }
 
 function rootDependencyVersion(lockfile: ParsedLockfile | null, name: string): string | null {
   if (!lockfile) return null;
   const direct = lockfile.rootDependencies[name];
   if (direct) return normalizeVersion(direct);
-  const node = findNodeByName(lockfile, name);
+  const node = resolveNode(lockfile, name, undefined);
   return node ? normalizeVersion(node.version) : null;
 }
 
@@ -69,8 +115,8 @@ function countReachablePackages(lockfile: ParsedLockfile, node: LockfilePackageN
   if (seen.has(node.id)) return 0;
   seen.add(node.id);
   let total = 1;
-  for (const depName of node.dependencies) {
-    const child = findNodeByName(lockfile, depName);
+  for (const [depName, depVersion] of Object.entries(node.dependencies)) {
+    const child = resolveNode(lockfile, depName, depVersion, node.id);
     if (child && !seen.has(child.id)) {
       total += countReachablePackages(lockfile, child, seen);
     }
@@ -78,15 +124,15 @@ function countReachablePackages(lockfile: ParsedLockfile, node: LockfilePackageN
   return total;
 }
 
-function transitiveCount(lockfile: ParsedLockfile | null, name: string): number | null {
+function transitiveCount(lockfile: ParsedLockfile | null, name: string, version?: string | null): number | null {
   if (!lockfile) return null;
-  const node = findNodeByName(lockfile, name);
+  const node = resolveNode(lockfile, name, version);
   if (!node) return null;
   return countReachablePackages(lockfile, node);
 }
 
-function packageMetadata(lockfile: ParsedLockfile | null, name: string) {
-  const node = lockfile ? findNodeByName(lockfile, name) : null;
+function packageMetadata(lockfile: ParsedLockfile | null, name: string, version?: string | null) {
+  const node = lockfile ? resolveNode(lockfile, name, version) : null;
   const metadata: NonNullable<NormalizedDependencyChange['metadata']> = {};
   if (node?.hasInstallScript) metadata.hasInstallScript = true;
   if (node?.nativeBuild) metadata.nativeBuild = true;
@@ -115,12 +161,12 @@ function buildChange(name: string, input: DependencyDeltaInput): NormalizedDepen
   }
 
   const changeType = determineChangeType(baseSpec, headSpec, baseVersion, headVersion);
-  const baseCount = transitiveCount(input.base.lockfile, name);
-  const headCount = transitiveCount(input.head.lockfile, name);
+  const baseCount = transitiveCount(input.base.lockfile, name, baseVersion);
+  const headCount = transitiveCount(input.head.lockfile, name, headVersion);
   const delta = baseCount !== null && headCount !== null ? headCount - baseCount : undefined;
   const metadata = {
-    ...packageMetadata(input.base.lockfile, name),
-    ...packageMetadata(input.head.lockfile, name),
+    ...packageMetadata(input.base.lockfile, name, baseVersion),
+    ...packageMetadata(input.head.lockfile, name, headVersion),
   };
 
   const change: NormalizedDependencyChange = {

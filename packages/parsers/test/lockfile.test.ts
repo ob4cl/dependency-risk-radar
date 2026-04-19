@@ -5,8 +5,9 @@ const packageLock = JSON.stringify({
   name: 'demo',
   lockfileVersion: 3,
   packages: {
-    '': { dependencies: { react: '19.1.0' } },
+    '': { dependencies: { react: '19.1.0', '@scope/pkg': '1.2.3' } },
     'node_modules/react': { name: 'react', version: '19.1.0', dependencies: { scheduler: '0.25.0' } },
+    'node_modules/@scope/pkg': { version: '1.2.3', dependencies: { react: '19.1.0' } },
     'node_modules/scheduler': { name: 'scheduler', version: '0.25.0', hasInstallScript: true },
   },
 });

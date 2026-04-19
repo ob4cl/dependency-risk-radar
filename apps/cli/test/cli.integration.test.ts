@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { dirname } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createGitRepoFixture } from '../../../tests/helpers/git-repo';
 
@@ -28,17 +29,22 @@ const headFiles = {
   }, null, 2),
 };
 
-function runCli(args: string[]) {
+function runCli(args: string[], workspaceRoot?: string) {
   return spawnSync(process.execPath, ['--import', 'tsx', 'apps/cli/src/cli.ts', ...args], {
     cwd: repoRoot,
     encoding: 'utf8',
+    env: {
+      ...process.env,
+      ...(workspaceRoot ? { DRR_WORKSPACE_ROOT: workspaceRoot } : {}),
+    },
   });
 }
 
 describe('radar cli analyze', () => {
   it('prints json only when requested', () => {
     const repo = createGitRepoFixture(baseFiles, headFiles);
-    const result = runCli(['analyze', '--repo', repo.repoPath, '--base', repo.baseRef, '--head', repo.headRef, '--format', 'json']);
+    const workspaceRoot = dirname(repo.repoPath);
+    const result = runCli(['analyze', '--repo', repo.repoPath, '--base', repo.baseRef, '--head', repo.headRef, '--format', 'json'], workspaceRoot);
     expect(result.status).toBe(0);
     expect(result.stdout.trim().startsWith('{')).toBe(true);
     const parsed = JSON.parse(result.stdout);
@@ -47,7 +53,8 @@ describe('radar cli analyze', () => {
 
   it('prints markdown only when requested', () => {
     const repo = createGitRepoFixture(baseFiles, headFiles);
-    const result = runCli(['analyze', '--repo', repo.repoPath, '--base', repo.baseRef, '--head', repo.headRef, '--format', 'markdown']);
+    const workspaceRoot = dirname(repo.repoPath);
+    const result = runCli(['analyze', '--repo', repo.repoPath, '--base', repo.baseRef, '--head', repo.headRef, '--format', 'markdown'], workspaceRoot);
     expect(result.status).toBe(0);
     expect(result.stdout.trim().startsWith('# Dependency Risk Radar')).toBe(true);
     expect(result.stdout).not.toContain('"analysisVersion"');
@@ -55,7 +62,8 @@ describe('radar cli analyze', () => {
 
   it('returns a stable error code for invalid refs', () => {
     const repo = createGitRepoFixture(baseFiles, headFiles);
-    const result = runCli(['analyze', '--repo', repo.repoPath, '--base', 'missing-base', '--head', repo.headRef, '--format', 'json']);
+    const workspaceRoot = dirname(repo.repoPath);
+    const result = runCli(['analyze', '--repo', repo.repoPath, '--base', 'missing-base', '--head', repo.headRef, '--format', 'json'], workspaceRoot);
     expect(result.status).toBe(2);
     expect(result.stderr).toContain('Invalid git reference');
   });

@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { dirname, join } from 'node:path';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import YAML from 'yaml';
 import { createGitRepoFixture } from '../../../tests/helpers/git-repo';
 import { readActionInputs, runAction } from '../src/index';
@@ -64,37 +64,50 @@ function createTempFile(name: string): string {
 }
 
 describe('github action wrapper', () => {
-  it('writes serialized outputs from local analysis', async () => {
+  let writeSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    writeSpy.mockRestore();
+    delete process.env.GITHUB_OUTPUT;
+    delete process.env.GITHUB_STEP_SUMMARY;
+    delete process.env.GITHUB_EVENT_PATH;
+    delete process.env.GITHUB_WORKSPACE;
+    delete process.env.INPUT_REPO;
+    delete process.env.INPUT_FORMAT;
+  });
+
+  it('writes serialized outputs from local analysis without dumping raw json or markdown to stdout', async () => {
     const repo = createGitRepoFixture(baseFiles, headFiles);
     const outputPath = createTempFile('outputs.txt');
     const summaryPath = createTempFile('summary.md');
-    const writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-
     process.env.GITHUB_OUTPUT = outputPath;
     process.env.GITHUB_STEP_SUMMARY = summaryPath;
+    process.env.GITHUB_WORKSPACE = dirname(repo.repoPath);
 
-    try {
-      const result = await runAction({
-        repoPath: repo.repoPath,
-        baseRef: repo.baseRef,
-        headRef: repo.headRef,
-        format: 'markdown',
-        liveMetadata: false,
-      });
+    const result = await runAction({
+      repoPath: repo.repoPath,
+      baseRef: repo.baseRef,
+      headRef: repo.headRef,
+      format: 'markdown',
+      liveMetadata: false,
+    });
 
-      const outputs = parseGitHubOutputs(readFileSync(outputPath, 'utf8'));
-      expect(outputs.decision).toBe(result.summary.decision);
-      expect(outputs.score).toBe(String(result.summary.totalRiskScore));
-      expect(outputs['exit-code-recommendation']).toBe(String(result.exitCodeRecommendation));
-      expect(outputs.json).toContain('"analysisVersion"');
-      expect(outputs.markdown).toContain('# Dependency Risk Radar');
-      expect(readFileSync(summaryPath, 'utf8')).toContain('# Dependency Risk Radar');
-      expect(writeSpy).toHaveBeenCalled();
-    } finally {
-      writeSpy.mockRestore();
-      delete process.env.GITHUB_OUTPUT;
-      delete process.env.GITHUB_STEP_SUMMARY;
-    }
+    const outputs = parseGitHubOutputs(readFileSync(outputPath, 'utf8'));
+    expect(outputs.decision).toBe(result.summary.decision);
+    expect(outputs.score).toBe(String(result.summary.totalRiskScore));
+    expect(outputs['exit-code-recommendation']).toBe(String(result.exitCodeRecommendation));
+    expect(outputs.json).toContain('"analysisVersion"');
+    expect(outputs.markdown).toContain('# Dependency Risk Radar');
+    expect(readFileSync(summaryPath, 'utf8')).toContain('# Dependency Risk Radar');
+
+    const stdoutText = writeSpy.mock.calls.map((call) => String(call[0])).join('');
+    expect(stdoutText).toContain('Dependency Risk Radar: decision=');
+    expect(stdoutText).not.toContain('"analysisVersion"');
+    expect(stdoutText).not.toContain('# Dependency Risk Radar');
   });
 
   it('resolves refs from the GitHub event payload when inputs are omitted', () => {
@@ -111,18 +124,12 @@ describe('github action wrapper', () => {
     process.env.INPUT_REPO = '.';
     process.env.INPUT_FORMAT = 'json';
 
-    try {
-      const inputs = readActionInputs();
-      expect(inputs.repoPath).toBe(repoRoot);
-      expect(inputs.baseRef).toBe('base-sha-123');
-      expect(inputs.headRef).toBe('head-sha-456');
-      expect(inputs.format).toBe('json');
-    } finally {
-      delete process.env.GITHUB_EVENT_PATH;
-      delete process.env.GITHUB_WORKSPACE;
-      delete process.env.INPUT_REPO;
-      delete process.env.INPUT_FORMAT;
-    }
+    const inputs = readActionInputs();
+    expect(inputs.repoPath).toBe(repoRoot);
+    expect(inputs.baseRef).toBe('base-sha-123');
+    expect(inputs.headRef).toBe('head-sha-456');
+    expect(inputs.format).toBe('json');
+    expect(inputs.allowedWorkspaceRoot).toBe(repoRoot);
   });
 
   it('documents the metadata contract in action.yml', () => {

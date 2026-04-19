@@ -205,15 +205,22 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function resolveWorkspaceRoot(): string {
+  return process.env['DRR_WORKSPACE_ROOT'] ?? process.env['GITHUB_WORKSPACE'] ?? process.cwd();
+}
+
 async function analyzeDependencyDiffWithGracefulFallback(
   deps: AnalysisDependencies,
   input: AnalyzeDependencyDiffInput | ReviewPullRequestDependenciesInput,
 ): Promise<{ result: Awaited<ReturnType<typeof analyzeRepository>>; metadataMode: 'offline' | 'live' | 'offline-fallback'; metadataFallbackReason?: string }> {
+  const workspaceRoot = resolveWorkspaceRoot();
   const normalizedInput = {
     repoPath: input.repoPath,
     baseRef: input.baseRef,
     headRef: input.headRef,
     policyPath: input.policyPath ?? null,
+    allowedWorkspaceRoot: workspaceRoot,
+    allowedConfigRoot: workspaceRoot,
   };
 
   if (!input.liveMetadata) {

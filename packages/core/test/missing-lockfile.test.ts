@@ -9,6 +9,6 @@ describe('analyzeRepository missing lockfile', () => {
       { 'package.json': JSON.stringify({ name: 'demo', dependencies: { react: '^19.0.0' } }, null, 2) },
     );
 
-    await expect(analyzeRepository({ repoPath: repo.repoPath, baseRef: repo.baseRef, headRef: repo.headRef })).rejects.toThrow(/No supported lockfile/);
+    await expect(analyzeRepository({ repoPath: repo.repoPath, baseRef: repo.baseRef, headRef: repo.headRef, allowedWorkspaceRoot: repo.repoPath, allowedConfigRoot: repo.repoPath })).rejects.toThrow(/No supported lockfile/);
   });
 });

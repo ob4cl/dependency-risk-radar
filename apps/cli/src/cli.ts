@@ -57,12 +57,15 @@ function writeAnalysisOutput(result: Awaited<ReturnType<typeof analyzeRepository
 }
 
 async function runAnalyze(options: { repo: string; base: string; head: string; policy?: string; format?: string; liveMetadata?: boolean; }): Promise<void> {
+  const workspaceRoot = process.env['DRR_WORKSPACE_ROOT'] ?? process.cwd();
   const result = await analyzeRepository({
     repoPath: options.repo,
     baseRef: options.base,
     headRef: options.head,
     policyPath: options.policy ?? null,
     liveMetadata: Boolean(options.liveMetadata),
+    allowedWorkspaceRoot: workspaceRoot,
+    allowedConfigRoot: workspaceRoot,
   });
   writeAnalysisOutput(result, normalizeFormat(options.format));
   process.exitCode = result.exitCodeRecommendation;

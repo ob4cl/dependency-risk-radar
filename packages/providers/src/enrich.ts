@@ -1,4 +1,4 @@
-import type { NormalizedDependencyChange } from '@drr/shared';
+import type { NormalizedDependencyChange, PackageMetadata } from '@drr/shared';
 import type { ProviderBundle } from './types';
 
 export async function enrichDependencyChanges(
@@ -17,11 +17,13 @@ export async function enrichDependencyChanges(
       }
 
       const extra: Record<string, unknown> = {
-        provider: {
-          metadataSource: metadata?.source ?? null,
-          vulnerabilityCount: vulnerabilities.length,
-        },
+        metadataSource: metadata?.source ?? null,
+        vulnerabilityCount: vulnerabilities.length,
       };
+
+      if (metadata?.raw && typeof metadata.raw === 'object') {
+        extra['providerMetadataRaw'] = metadata.raw;
+      }
 
       if (metadata) {
         extra['registry'] = {
@@ -39,15 +41,30 @@ export async function enrichDependencyChanges(
         extra['vulnerabilities'] = vulnerabilities;
       }
 
+      const mergedMetadata: PackageMetadata = {
+        ...change.metadata,
+        extra: {
+          ...(change.metadata.extra ?? {}),
+          ...extra,
+        },
+      };
+
+      if (metadata?.license !== null && metadata?.license !== undefined) {
+        mergedMetadata.license = metadata.license;
+      }
+      if (metadata?.repository !== null && metadata?.repository !== undefined) {
+        mergedMetadata.repository = metadata.repository;
+      }
+      if (metadata?.homepage !== null && metadata?.homepage !== undefined) {
+        mergedMetadata.homepage = metadata.homepage;
+      }
+      if (metadata?.description !== null && metadata?.description !== undefined) {
+        mergedMetadata.description = metadata.description;
+      }
+
       return {
         ...change,
-        metadata: {
-          ...change.metadata,
-          extra: {
-            ...(change.metadata.extra ?? {}),
-            ...extra,
-          },
-        },
+        metadata: mergedMetadata,
       };
     }),
   );

@@ -8,7 +8,8 @@ export interface ProviderPackageMetadata {
   repository: string | null;
   homepage: string | null;
   description: string | null;
-  source: 'npm' | 'github';
+  source: 'npm';
+  raw?: Record<string, unknown> | null;
 }
 
 export type ProviderSeverity = 'critical' | 'high' | 'moderate' | 'low' | 'unknown';

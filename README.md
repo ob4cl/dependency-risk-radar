@@ -1,69 +1,120 @@
 # Dependency Risk Radar
 
-Dependency Risk Radar is a local-first dependency change analyzer for JavaScript and TypeScript repositories.
+Dependency Risk Radar is a local-first dependency risk analyzer for pull-request and branch comparisons.
 
-It answers one question:
+It compares two Git refs, inspects manifest + lockfile dependency changes, scores risk, and returns machine-readable JSON plus review-friendly Markdown.
 
-> Is this dependency change safe enough to merge, and if not, why?
+## What the tool does
 
-## What it does
-
-- Detects dependency additions, removals, upgrades, downgrades, and lockfile-only changes
-- Works with `package.json`, `package-lock.json`, and `pnpm-lock.yaml`
-- Produces deterministic JSON analysis output
-- Produces a Markdown review summary for pull requests
-- Supports explicit output modes (`--format json|markdown|both`)
-- Can optionally enrich results with live provider metadata via `--live-metadata`
-
-## What it does not do in v1
-
-- No web dashboard
-- No GitHub App
-- No Python, Rust, Java, Docker, or multi-ecosystem support
-- No SBOM export
-- No cloud backend
-- No machine-learning trust model
-- No distributed workers
+- Analyzes dependency changes between `base` and `head` refs
+- Supports npm and pnpm lockfile formats
+- Scores risk using policy-driven thresholds and controls
+- Produces deterministic JSON output for automation
+- Produces Markdown summaries for review workflows
+- Provides:
+  - CLI (`radar`)
+  - MCP server
+  - GitHub Action wrapper
 
 ## Supported ecosystems
 
-- npm / package-lock.json
-- pnpm / pnpm-lock.yaml
+- npm (`package-lock.json`)
+- pnpm (`pnpm-lock.yaml`)
 
-## Local dev quickstart
+## Current limitations
+
+- JavaScript/TypeScript dependency workflows only (no Python/Rust/Java support yet)
+- No dashboard or backend service
+- No SBOM export
+- No automatic package remediation
+
+## Installation
+
+Published package:
+
+```bash
+npm install -g dradar
+```
+
+Local workspace development:
 
 ```bash
 corepack enable
 corepack pnpm install
-corepack pnpm analyze -- --repo . --base main --head HEAD
+corepack pnpm build
+corepack pnpm test
 ```
 
-The repo root keeps the local workflow simple:
+## CLI usage
 
-- `corepack pnpm analyze` runs the CLI against the current checkout
-- `corepack pnpm review-pr` renders the PR-oriented review flow
-- `corepack pnpm explain` prints a package-level risk explanation stub
-- `corepack pnpm init-policy` writes a starter policy file
-
-## CLI commands
+Analyze dependency changes:
 
 ```bash
-corepack pnpm analyze -- --repo . --base main --head HEAD
-corepack pnpm review-pr -- --repo . --base main --head HEAD --policy ./dependency-risk-radar.yaml
-corepack pnpm explain -- npm react@19.1.0
-corepack pnpm init-policy
+radar analyze --repo . --base main --head HEAD
 ```
 
-## GitHub Action wrapper
+Render markdown only:
 
-The local GitHub Action lives in `apps/github-action` and wraps the core analyzer without adding any network calls.
+```bash
+radar review-pr --repo . --base main --head HEAD --format markdown
+```
 
-- Action metadata: `apps/github-action/action.yml`
-- Action bundle entrypoint: `apps/github-action/dist/index.js`
-- Source wrapper: `apps/github-action/src/index.ts`
-- Action-specific docs: `apps/github-action/README.md`
+Use explicit policy file:
 
-The action exposes these outputs:
+```bash
+radar analyze --repo . --base main --head HEAD --policy ./dependency-risk-radar.yaml
+```
+
+Initialize a starter policy:
+
+```bash
+radar init-policy --out ./dependency-risk-radar.yaml
+```
+
+## MCP usage
+
+MCP server package: `apps/mcp-server`
+
+Exposed tools:
+
+- `analyze_dependency_diff`
+- `explain_package_risk`
+- `review_pull_request_dependencies`
+- `generate_policy_file`
+
+## Policy file example
+
+```yaml
+ecosystems:
+  npm:
+    enabled: true
+  pnpm:
+    enabled: true
+
+thresholds:
+  block_score: 70
+  warn_score: 25
+
+policies:
+  block_known_critical_vulns: true
+  require_lockfile: true
+  require_manual_review_for_install_scripts: true
+
+licenses:
+  deny:
+    - GPL-3.0
+    - AGPL-3.0
+
+packages:
+  deny:
+    - example-banned-package
+```
+
+## GitHub Action
+
+Local action path: `apps/github-action`
+
+Action outputs:
 
 - `json`
 - `markdown`
@@ -71,86 +122,12 @@ The action exposes these outputs:
 - `score`
 - `exit-code-recommendation`
 
-See `.github/workflows/ci-release.yml` for a minimal example that runs the local action and prepares the release-oriented npm package flow.
+## Security disclosures
 
-## npm-packable CLI package
+Please report vulnerabilities privately (do not open public issues for security reports).
+See `SECURITY.md`.
 
-The publishable npm unit lives in `apps/cli` as `dradar`.
+## Release status
 
-Today the workspace is set up for local execution and packaging inspection. The package can be packed from the CLI folder, and `npm pack` is the right way to verify what would ship.
-
-```bash
-cd apps/cli
-npm pack --dry-run --json
-npm pack
-```
-
-Use the dry run output to check:
-
-- which files are included
-- whether the bin entry points at the right path
-- whether the tarball is carrying only the intended release surface
-
-The publishable package is intended to ship `dist/` only. Before a real registry publish, make sure the installed binary points to runnable JavaScript, not just TypeScript source.
-
-For the package-level release checklist, see `apps/cli/README.md`.
-
-## Release flow
-
-The recommended release loop is:
-
-```bash
-cd apps/cli
-npm version patch --no-git-tag-version
-cd ../..
-corepack pnpm release:check
-corepack pnpm release:pack
-corepack pnpm release:publish
-```
-
-For a checklist and rationale, see `docs/release-flow.md`.
-
-## Publishing prerequisites
-
-Before you publish to npm, line up the registry-side details first:
-
-- Run `npm login` locally and confirm `npm whoami`
-- Verify the package name and scope are owned by the account or org that will publish it
-- Decide whether the package should be public or restricted on npm
-- If publishing from CI, create an automation token with publish rights and inject it as `NPM_TOKEN`
-- Set the registry auth entry in CI with the standard npm token form:
-
-```ini
-//registry.npmjs.org/:_authToken=${NPM_TOKEN}
-```
-
-The repo can stay private on GitHub while the CLI package is published separately on npm.
-
-## MCP usage in Hermes
-
-The MCP server will expose these tools:
-
-- `analyze_dependency_diff`
-- `explain_package_risk`
-- `review_pull_request_dependencies`
-- `generate_policy_file`
-
-Agent activation keyword for the full team: `use agent team`
-
-## Current milestone
-
-Implemented now:
-
-- Monorepo scaffold
-- Shared schemas and types
-- npm / pnpm manifest and lockfile parsing
-- Dependency delta generation
-- Minimal CLI analyze flow
-- Provider layer with deterministic fallback
-- CLI output contract with explicit format options
-- Initial tests and docs
-- GitHub Action wrapper with outputs and release-prep workflow
-
-Still pending:
-
-- Full scoring and policy enforcement expansion
+This repository is in pre-1.0 hardening mode for first public release.
+Core security boundaries, packaging validation, and release workflows are in place; additional ecosystem support is planned post-1.0.

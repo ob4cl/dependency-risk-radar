@@ -85,6 +85,8 @@ describe('mcp tool handlers', () => {
       headRef: 'head',
       policyPath: null,
       liveMetadata: false,
+      allowedWorkspaceRoot: process.cwd(),
+      allowedConfigRoot: process.cwd(),
     });
 
     const payload = JSON.parse(result.content[0]!.text) as { tool: string; summary: { decision: string }; report: { json: string } };

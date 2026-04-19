@@ -32,7 +32,7 @@ const headFiles = {
 describe('analyzeRepository', () => {
   it('produces a deterministic final analysis result', async () => {
     const repo = createGitRepoFixture(baseFiles, headFiles);
-    const result = await analyzeRepository({ repoPath: repo.repoPath, baseRef: repo.baseRef, headRef: repo.headRef });
+    const result = await analyzeRepository({ repoPath: repo.repoPath, baseRef: repo.baseRef, headRef: repo.headRef, allowedWorkspaceRoot: repo.repoPath, allowedConfigRoot: repo.repoPath });
     expect(result.dependencyChanges).toHaveLength(1);
     expect(result.dependencyChanges[0]?.name).toBe('react');
     expect(result.markdownReport).toContain('Dependency Risk Radar');
