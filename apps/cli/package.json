@@ -1,0 +1,20 @@
+{
+  "name": "@drr/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "radar": "./src/cli.ts"
+  },
+  "main": "./src/cli.ts",
+  "types": "./src/cli.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@drr/core": "workspace:*",
+    "@drr/policy": "workspace:*",
+    "@drr/reporters": "workspace:*",
+    "commander": "^12.1.0"
+  }
+}

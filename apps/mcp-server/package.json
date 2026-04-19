@@ -1,0 +1,15 @@
+{
+  "name": "@drr/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@drr/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.15.0"
+  }
+}

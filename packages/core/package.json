@@ -1,0 +1,19 @@
+{
+  "name": "@drr/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@drr/parsers": "workspace:*",
+    "@drr/policy": "workspace:*",
+    "@drr/providers": "workspace:*",
+    "@drr/reporters": "workspace:*",
+    "@drr/scoring": "workspace:*",
+    "@drr/shared": "workspace:*"
+  }
+}

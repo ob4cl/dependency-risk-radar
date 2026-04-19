@@ -1,0 +1,29 @@
+{
+  "name": "dependency-risk-radar",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "analyze": "tsx apps/cli/src/cli.ts analyze",
+    "review-pr": "tsx apps/cli/src/cli.ts review-pr",
+    "init-policy": "tsx apps/cli/src/cli.ts init-policy",
+    "explain": "tsx apps/cli/src/cli.ts explain"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.0",
+    "@types/node": "^24.0.0",
+    "commander": "^12.1.0",
+    "eslint": "^9.30.0",
+    "globals": "^15.15.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.39.0",
+    "vitest": "^3.2.4",
+    "yaml": "^2.8.1",
+    "zod": "^3.25.76"
+  }
+}

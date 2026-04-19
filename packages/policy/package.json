@@ -1,0 +1,16 @@
+{
+  "name": "@drr/policy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@drr/shared": "workspace:*",
+    "yaml": "^2.8.1",
+    "zod": "^3.25.76"
+  }
+}
