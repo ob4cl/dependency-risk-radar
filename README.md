@@ -59,10 +59,10 @@ Typical interpretation:
 
 ## Current limitations (v1)
 
-- JavaScript/TypeScript dependency workflows only
-- No SBOM export
-- No automated remediation/fix PR generation
-- No Python/Rust/Java ecosystem support yet
+JavaScript/TypeScript dependency workflows only
+No SBOM export
+No automated remediation/fix PR generation
+No Python/Rust/Java ecosystem support yet
 
 ## Install
 
