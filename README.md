@@ -139,4 +139,3 @@ Implemented now:
 Still pending:
 
 - Full scoring and policy enforcement expansion
-- MCP server implementation

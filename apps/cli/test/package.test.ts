@@ -8,6 +8,7 @@ const repoRoot = '/home/tyler/.openclaw/workspace/drr';
 const packageRoot = join(repoRoot, 'apps/cli');
 const distDir = join(packageRoot, 'dist');
 const packageJsonPath = join(packageRoot, 'package.json');
+const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { version: string; name: string };
 
 function run(command: string, args: string[], cwd: string) {
   return spawnSync(command, args, {
@@ -90,10 +91,10 @@ describe('apps/cli packaging', () => {
 
     const packedFiles = packInfo.files.map((file) => file.path).sort();
 
-    expect(packInfo.id).toBe('dradar@0.1.0');
+    expect(packInfo.id).toBe(`dradar@${packageJson.version}`);
     expect(packInfo.name).toBe('dradar');
-    expect(packInfo.version).toBe('0.1.0');
-    expect(packInfo.filename).toBe('dradar-0.1.0.tgz');
+    expect(packInfo.version).toBe(packageJson.version);
+    expect(packInfo.filename).toBe(`dradar-${packageJson.version}.tgz`);
     expect(packInfo.entryCount).toBe(4);
     expect(packedFiles).toEqual(['README.md', 'bin/radar', 'dist/cli.js', 'package.json']);
     expect(packedFiles).not.toContain('src/cli.ts');

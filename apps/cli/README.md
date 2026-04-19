@@ -43,7 +43,7 @@ The publish build is designed to ship `dist/` only. Before a real publish, verif
 Inspect a generated tarball with:
 
 ```bash
-tar -tf dradar-0.1.0.tgz
+tar -tf dradar-0.1.1.tgz
 ```
 
 ## Publish checklist
