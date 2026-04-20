@@ -26,13 +26,22 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install
-        run: corepack enable && corepack pnpm install --frozen-lockfile
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install (untrusted PR mode)
+        if: github.event_name == 'pull_request'
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Install (trusted mode)
+        if: github.event_name != 'pull_request'
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Build
         run: corepack pnpm build
 
       - name: Verify GitHub Action dist integrity
+        if: github.event_name != 'pull_request'
         run: |
           corepack pnpm --filter @drr/github-action build
           git diff --exit-code -- apps/github-action/dist/index.cjs
@@ -41,6 +50,7 @@ jobs:
         run: corepack pnpm test
 
   action-demo:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,8 +63,11 @@ jobs:
         with:
           node-version: 20
 
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Install
-        run: corepack enable && corepack pnpm install --frozen-lockfile
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Build action bundle
         run: corepack pnpm --filter @drr/github-action build
@@ -92,8 +105,11 @@ jobs:
         with:
           node-version: 20
 
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Install
-        run: corepack enable && corepack pnpm install --frozen-lockfile
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Build GitHub Action bundle
         run: corepack pnpm --filter @drr/github-action build

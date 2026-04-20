@@ -294,6 +294,10 @@ If policy path is missing/unreadable/invalid, analysis fails (no silent fallback
 4. Keep policy file versioned in repo
 5. Review policy changes via normal PR review process
 
+CI trust modes in this repository:
+- pull_request (untrusted mode): install uses `corepack pnpm install --frozen-lockfile --ignore-scripts`; CI still runs TypeScript build and tests, but skips action-bundle dist regeneration checks that may require lifecycle scripts.
+- push/tag/workflow_dispatch (trusted mode): install runs without `--ignore-scripts`; CI runs full validation including GitHub Action dist integrity checks and release prep checks.
+
 ## Architecture (high level)
 
 ```text

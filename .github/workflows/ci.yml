@@ -19,9 +19,15 @@ jobs:
         with:
           node-version: 20
       - run: corepack enable
-      - run: corepack pnpm install --frozen-lockfile
+      - name: Install dependencies (untrusted PR mode)
+        if: github.event_name == 'pull_request'
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install dependencies (trusted mode)
+        if: github.event_name != 'pull_request'
+        run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm build
       - name: Verify GitHub Action dist integrity
+        if: github.event_name != 'pull_request'
         run: |
           corepack pnpm --filter @drr/github-action build
           git diff --exit-code -- apps/github-action/dist/index.cjs
