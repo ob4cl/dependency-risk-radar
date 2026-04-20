@@ -22041,6 +22041,16 @@ function renderJsonReport(result) {
 }
 
 // ../../packages/reporters/src/markdown.ts
+var CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F-\u009F]/g;
+function sanitizeForDisplay(value) {
+  return value.replaceAll(CONTROL_CHARACTER_PATTERN, (character) => {
+    const codePoint = character.codePointAt(0);
+    if (typeof codePoint !== "number") {
+      return "";
+    }
+    return `\\u${codePoint.toString(16).padStart(4, "0")}`;
+  });
+}
 function renderMarkdownReport(result) {
   const lines = [];
   lines.push("# Dependency Risk Radar");
@@ -22059,7 +22069,10 @@ function renderMarkdownReport(result) {
   } else {
     for (const change of result.dependencyChanges) {
       const delta = typeof change.transitiveCountDelta === "number" ? `, transitive \u0394 ${change.transitiveCountDelta}` : "";
-      lines.push(`- ${change.name}: ${change.changeType} (${change.fromVersion ?? "n/a"} \u2192 ${change.toVersion ?? "n/a"})${delta}`);
+      const name = sanitizeForDisplay(change.name);
+      const fromVersion = sanitizeForDisplay(change.fromVersion ?? "n/a");
+      const toVersion = sanitizeForDisplay(change.toVersion ?? "n/a");
+      lines.push(`- ${name}: ${change.changeType} (${fromVersion} \u2192 ${toVersion})${delta}`);
     }
   }
   lines.push("");
@@ -22068,15 +22081,20 @@ function renderMarkdownReport(result) {
     lines.push("- None");
   } else {
     for (const finding of result.findings) {
-      lines.push(`- [${finding.severity}] ${finding.title} (score ${finding.score})`);
-      lines.push(`  - ${finding.summary}`);
-      if (finding.evidence.length > 0) {
-        lines.push(`  - Evidence: ${finding.evidence.join("; ")}`);
+      const title = sanitizeForDisplay(finding.title);
+      const summary = sanitizeForDisplay(finding.summary);
+      const evidence = finding.evidence.map((entry) => sanitizeForDisplay(entry));
+      const policySource = finding.policySource ? sanitizeForDisplay(finding.policySource) : void 0;
+      const recommendation = sanitizeForDisplay(finding.recommendation);
+      lines.push(`- [${finding.severity}] ${title} (score ${finding.score})`);
+      lines.push(`  - ${summary}`);
+      if (evidence.length > 0) {
+        lines.push(`  - Evidence: ${evidence.join("; ")}`);
       }
-      if (finding.policySource) {
-        lines.push(`  - Policy: ${finding.policySource}`);
+      if (policySource) {
+        lines.push(`  - Policy: ${policySource}`);
       }
-      lines.push(`  - Recommendation: ${finding.recommendation}`);
+      lines.push(`  - Recommendation: ${recommendation}`);
     }
   }
   return `${lines.join(String.fromCharCode(10))}${String.fromCharCode(10)}`;
