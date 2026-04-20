@@ -25,16 +25,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
       - name: Install
-        run: corepack enable && pnpm install --frozen-lockfile
+        run: corepack enable && corepack pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: corepack pnpm build
 
       - name: Test
-        run: pnpm test
+        run: corepack pnpm test
 
   action-demo:
     runs-on: ubuntu-latest
@@ -48,13 +47,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
       - name: Install
-        run: corepack enable && pnpm install --frozen-lockfile
+        run: corepack enable && corepack pnpm install --frozen-lockfile
 
       - name: Build action bundle
-        run: pnpm --filter @drr/github-action build
+        run: corepack pnpm --filter @drr/github-action build
 
       - name: Run Dependency Risk Radar action
         id: radar
@@ -85,13 +83,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
       - name: Install
-        run: corepack enable && pnpm install --frozen-lockfile
+        run: corepack enable && corepack pnpm install --frozen-lockfile
 
       - name: Build GitHub Action bundle
-        run: pnpm --filter @drr/github-action build
+        run: corepack pnpm --filter @drr/github-action build
 
       - name: Prepare npm package
         run: cd apps/cli && npm pack --dry-run --json

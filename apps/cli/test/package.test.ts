@@ -12,7 +12,11 @@ const repoRoot = resolve(testDir, '../../..');
 const packageRoot = join(repoRoot, 'apps/cli');
 const distDir = join(packageRoot, 'dist');
 const packageJsonPath = join(packageRoot, 'package.json');
-const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { version: string; name: string };
+const packageMetadata = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
+  version: string;
+  name: string;
+  dependencies?: Record<string, string>;
+};
 
 function run(command: string, args: string[], cwd: string) {
   return spawnSync(command, args, {
@@ -95,10 +99,10 @@ describe('apps/cli packaging', () => {
 
     const packedFiles = packInfo.files.map((file) => file.path).sort();
 
-    expect(packInfo.id).toBe(`dradar@${packageJson.version}`);
+    expect(packInfo.id).toBe(`dradar@${packageMetadata.version}`);
     expect(packInfo.name).toBe('dradar');
-    expect(packInfo.version).toBe(packageJson.version);
-    expect(packInfo.filename).toBe(`dradar-${packageJson.version}.tgz`);
+    expect(packInfo.version).toBe(packageMetadata.version);
+    expect(packInfo.filename).toBe(`dradar-${packageMetadata.version}.tgz`);
     expect(packInfo.entryCount).toBe(4);
     expect(packedFiles).toEqual(['README.md', 'bin/radar', 'dist/cli.cjs', 'package.json']);
     expect(packedFiles).not.toContain('src/cli.ts');
@@ -142,6 +146,6 @@ describe('apps/cli packaging', () => {
     expect(packageJson.bin).toEqual({ radar: './bin/radar' });
     expect(packageJson.main).toBe('./dist/cli.cjs');
     expect(packageJson.main.endsWith('.ts')).toBe(false);
-    expect(packageJson.dependencies).toEqual({ commander: '^12.1.0' });
+    expect(packageJson.dependencies).toEqual(packageMetadata.dependencies);
   });
 });

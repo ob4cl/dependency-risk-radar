@@ -8,7 +8,6 @@ permissions:
 
 jobs:
   publish:
-    if: ${{ secrets.NPM_TOKEN != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,8 +16,8 @@ jobs:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
       - run: corepack enable
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --dir apps/cli run release:check
-      - run: pnpm --dir apps/cli run release:publish
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm --dir apps/cli run release:check
+      - run: corepack pnpm --dir apps/cli run release:publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
