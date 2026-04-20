@@ -21,4 +21,8 @@ jobs:
       - run: corepack enable
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm build
+      - name: Verify GitHub Action dist integrity
+        run: |
+          corepack pnpm --filter @drr/github-action build
+          git diff --exit-code -- apps/github-action/dist/index.cjs
       - run: corepack pnpm test

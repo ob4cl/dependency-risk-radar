@@ -64,7 +64,7 @@ JavaScript/TypeScript dependency workflows only
 Direct dependency deltas are computed from root manifest entries (`package.json` dependencies) plus lockfile resolution
 Transitive analysis is currently impact scoring (reachable-package delta), not a full workspace-wide graph diff
 Current analysis scope is repo-root `package.json` + lockfile, not full multi-workspace manifest discovery
-No SBOM export
+CycloneDX SBOM export is available via reporter and CLI `--output sbom`
 No automated remediation/fix PR generation
 No Python/Rust/Java ecosystem support yet
 
@@ -207,6 +207,20 @@ Thresholds and scoring weights are policy-controlled and auditable.
   "policyApplied": true,
   "exitCodeRecommendation": 0
 }
+```
+
+## SBOM output (CycloneDX)
+
+Track 1 adds deterministic SBOM export via CycloneDX JSON.
+
+- Reporter API: `renderSbomReport(result)`
+- CLI formats: `--output sbom` (alias: `--output cyclonedx`)
+- Sample fixture: `docs/samples/sbom.cyclonedx.json`
+
+Example:
+
+```bash
+cat analysis-result.json | pnpm --dir apps/cli exec drr --output sbom
 ```
 
 ## GitHub Action usage
@@ -371,10 +385,14 @@ From repo root:
 
 ```bash
 corepack pnpm build
+corepack pnpm --filter @drr/github-action build
+git diff --exit-code -- apps/github-action/dist/index.cjs
 corepack pnpm test
 corepack pnpm --dir apps/cli run release:check
 corepack pnpm --dir apps/cli run pack:dry-run
 ```
+
+CI now enforces that `apps/github-action/dist/index.cjs` is regenerated from source with no diff, preventing stale committed action runtime artifacts.
 
 For complete publication readiness instructions, see `RELEASE_READINESS.md`.
 

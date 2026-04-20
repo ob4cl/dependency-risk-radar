@@ -32,6 +32,11 @@ jobs:
       - name: Build
         run: corepack pnpm build
 
+      - name: Verify GitHub Action dist integrity
+        run: |
+          corepack pnpm --filter @drr/github-action build
+          git diff --exit-code -- apps/github-action/dist/index.cjs
+
       - name: Test
         run: corepack pnpm test
 
@@ -54,9 +59,11 @@ jobs:
       - name: Build action bundle
         run: corepack pnpm --filter @drr/github-action build
 
+      - name: Verify action dist integrity
+        run: git diff --exit-code -- apps/github-action/dist/index.cjs
+
       - name: Run Dependency Risk Radar action
         id: radar
-        continue-on-error: true
         uses: ./apps/github-action
         with:
           repo: .
@@ -90,6 +97,9 @@ jobs:
 
       - name: Build GitHub Action bundle
         run: corepack pnpm --filter @drr/github-action build
+
+      - name: Verify action dist integrity
+        run: git diff --exit-code -- apps/github-action/dist/index.cjs
 
       - name: Prepare npm package
         run: cd apps/cli && npm pack --dry-run --json
