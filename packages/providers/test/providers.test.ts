@@ -63,7 +63,10 @@ describe('OsvVulnerabilityProvider', () => {
         'high': [{ type: 'HIGH' }],
         'moderate': [{ severity: 'MODERATE' }],
         'low': [{ score: '2.5' }],
-        'unknown': [{ type: 'CVSS_V3', score: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H' }],
+        'vector-critical': [{ type: 'CVSS_V3', score: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H' }],
+        'vector-high': [{ type: 'CVSS_V3', score: 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H' }],
+        'vector-v4-critical': [{ type: 'CVSS_V4', score: 'CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/BS:9.3' }],
+        'unknown': [{ type: 'CVSS_V3', score: 'CVSS:3.1/AV:X/AC:L' }],
       };
       return {
         ok: true,
@@ -92,6 +95,9 @@ describe('OsvVulnerabilityProvider', () => {
     ['high', 'high'],
     ['moderate', 'moderate'],
     ['low', 'low'],
+    ['vector-critical', 'critical'],
+    ['vector-high', 'high'],
+    ['vector-v4-critical', 'critical'],
     ['unknown', 'unknown'],
   ] as const)('normalizes %s severity responses', async (version, expected) => {
     const provider = new OsvVulnerabilityProvider(10);

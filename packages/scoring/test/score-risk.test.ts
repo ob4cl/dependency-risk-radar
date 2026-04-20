@@ -86,7 +86,9 @@ describe('scoreDependencyChanges', () => {
       blockKnownCriticalVulns: true,
     });
 
-    expect(result.findings.some((finding) => finding.category === 'known-vulnerability')).toBe(true);
+    const vulnerabilityFinding = result.findings.find((finding) => finding.category === 'known-vulnerability');
+    expect(vulnerabilityFinding).toBeDefined();
+    expect(vulnerabilityFinding?.severity).toBe('critical');
     expect(result.summary.decision).toBe('fail');
   });
 });
