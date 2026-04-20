@@ -188,7 +188,7 @@ async function main(): Promise<void> {
   }
 }
 
-const isDirectExecution = typeof process.argv[1] === 'string' && process.argv[1].endsWith('/dist/index.js');
+const isDirectExecution = typeof process.argv[1] === 'string' && /\/dist\/index\.(cjs|js)$/.test(process.argv[1]);
 if (isDirectExecution) {
   void main();
 }

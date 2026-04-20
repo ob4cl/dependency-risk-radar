@@ -35,7 +35,7 @@ outputs:
     description: Recommended exit code for the analysis result.
 runs:
   using: node20
-  main: dist/index.js
+  main: dist/index.cjs
 branding:
   icon: shield
   color: gray-dark

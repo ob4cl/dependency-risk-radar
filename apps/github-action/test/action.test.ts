@@ -144,7 +144,7 @@ describe('github action wrapper', () => {
 
     expect(parsed.name).toBe('Dependency Risk Radar');
     expect(runs.using).toBe('node20');
-    expect(runs.main).toBe('dist/index.js');
+    expect(runs.main).toBe('dist/index.cjs');
     expect(Object.keys(inputs).sort()).toEqual(['base', 'format', 'head', 'live-metadata', 'policy', 'repo']);
     expect(Object.keys(outputs).sort()).toEqual(['decision', 'exit-code-recommendation', 'json', 'markdown', 'score']);
   });
