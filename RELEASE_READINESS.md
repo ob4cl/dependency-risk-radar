@@ -61,6 +61,8 @@ Docs:
 ## Remaining known limitations
 
 - Scope remains npm/pnpm dependency analysis only.
+- Delta generation focuses on direct root-manifest dependencies with lockfile-resolved versions.
+- Transitive analysis is currently impact scoring (`transitiveCountDelta`), not a full workspace-wide graph diff.
 - No automated remediation or SBOM export in v1.
 - npm commands in this environment print non-blocking warnings about unknown npm env config keys (`verify-deps-before-run`, `npm-globalconfig`, `_jsr-registry`, etc.). Packaging and tests still pass.
 

@@ -2,10 +2,13 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, rmSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-const repoRoot = '/home/tyler/.openclaw/workspace/drr';
+const testFilePath = fileURLToPath(import.meta.url);
+const testDir = dirname(testFilePath);
+const repoRoot = resolve(testDir, '../../..');
 const packageRoot = join(repoRoot, 'apps/cli');
 const distDir = join(packageRoot, 'dist');
 const packageJsonPath = join(packageRoot, 'package.json');

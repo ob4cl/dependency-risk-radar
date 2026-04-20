@@ -2,6 +2,19 @@ import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 import { PolicyValidationError } from '@drr/shared';
 
+const defaultScoringWeights = {
+  vulnerability: 40,
+  install_time_execution: 20,
+  blast_radius: 15,
+  maintenance_trust: 15,
+  policy: 10,
+} as const;
+
+const defaultScoringConfig = {
+  high_risk_score: 50,
+  weights: defaultScoringWeights,
+} as const;
+
 const policySchema = z.object({
   ecosystems: z.object({
     npm: z.object({ enabled: z.boolean().default(true) }).default({ enabled: true }),
@@ -11,6 +24,16 @@ const policySchema = z.object({
     block_score: z.number().int().min(0).default(70),
     warn_score: z.number().int().min(0).default(25),
   }).default({ block_score: 70, warn_score: 25 }),
+  scoring: z.object({
+    high_risk_score: z.number().int().min(0).default(defaultScoringConfig.high_risk_score),
+    weights: z.object({
+      vulnerability: z.number().int().min(0).default(defaultScoringWeights.vulnerability),
+      install_time_execution: z.number().int().min(0).default(defaultScoringWeights.install_time_execution),
+      blast_radius: z.number().int().min(0).default(defaultScoringWeights.blast_radius),
+      maintenance_trust: z.number().int().min(0).default(defaultScoringWeights.maintenance_trust),
+      policy: z.number().int().min(0).default(defaultScoringWeights.policy),
+    }).default(defaultScoringWeights),
+  }).default(defaultScoringConfig),
   policies: z.object({
     block_known_critical_vulns: z.boolean().default(true),
     require_lockfile: z.boolean().default(true),
@@ -33,6 +56,16 @@ export interface PolicyConfig {
     block_score: number;
     warn_score: number;
   };
+  scoring: {
+    high_risk_score: number;
+    weights: {
+      vulnerability: number;
+      install_time_execution: number;
+      blast_radius: number;
+      maintenance_trust: number;
+      policy: number;
+    };
+  };
   policies: {
     block_known_critical_vulns: boolean;
     require_lockfile: boolean;
@@ -46,6 +79,7 @@ export interface ScoringConfig {
   thresholds: {
     warnScore: number;
     failScore: number;
+    highRiskScore: number;
   };
   weights: {
     vulnerability: number;
@@ -68,6 +102,16 @@ export const defaultPolicyConfig: PolicyConfig = {
   thresholds: {
     block_score: 70,
     warn_score: 25,
+  },
+  scoring: {
+    high_risk_score: defaultScoringConfig.high_risk_score,
+    weights: {
+      vulnerability: defaultScoringWeights.vulnerability,
+      install_time_execution: defaultScoringWeights.install_time_execution,
+      blast_radius: defaultScoringWeights.blast_radius,
+      maintenance_trust: defaultScoringWeights.maintenance_trust,
+      policy: defaultScoringWeights.policy,
+    },
   },
   policies: {
     block_known_critical_vulns: true,
@@ -105,13 +149,14 @@ export function policyToScoringConfig(policy: PolicyConfig): ScoringConfig {
     thresholds: {
       warnScore: policy.thresholds.warn_score,
       failScore: policy.thresholds.block_score,
+      highRiskScore: policy.scoring.high_risk_score,
     },
     weights: {
-      vulnerability: 40,
-      installTimeExecution: 20,
-      blastRadius: 15,
-      maintenanceTrust: 15,
-      policy: 10,
+      vulnerability: policy.scoring.weights.vulnerability,
+      installTimeExecution: policy.scoring.weights.install_time_execution,
+      blastRadius: policy.scoring.weights.blast_radius,
+      maintenanceTrust: policy.scoring.weights.maintenance_trust,
+      policy: policy.scoring.weights.policy,
     },
     deniedPackages: [...policy.packages.deny],
     deniedLicenses: [...policy.licenses.deny],

@@ -21,7 +21,7 @@ const baseChange: NormalizedDependencyChange = {
 };
 
 describe('scoreDependencyChanges', () => {
-  it('creates deterministic findings for install script, blast radius, and policy risk', () => {
+  it('uses default high-risk threshold when omitted', () => {
     const result = scoreDependencyChanges([baseChange], {
       thresholds: { warnScore: 25, failScore: 70 },
       weights: { vulnerability: 40, installTimeExecution: 20, blastRadius: 15, maintenanceTrust: 15, policy: 10 },
@@ -31,9 +31,37 @@ describe('scoreDependencyChanges', () => {
       blockKnownCriticalVulns: false,
     });
 
-    expect(result.findings).toHaveLength(4);
     expect(result.summary.totalRiskScore).toBe(55);
     expect(result.summary.decision).toBe('high-risk');
+  });
+
+  it('honors custom weights from policy config', () => {
+    const result = scoreDependencyChanges([baseChange], {
+      thresholds: { warnScore: 25, failScore: 70, highRiskScore: 50 },
+      weights: { vulnerability: 40, installTimeExecution: 13, blastRadius: 15, maintenanceTrust: 15, policy: 7 },
+      deniedPackages: ['bad-package'],
+      deniedLicenses: ['GPL-3.0'],
+      requireInstallScriptReview: true,
+      blockKnownCriticalVulns: false,
+    });
+
+    expect(result.findings).toHaveLength(4);
+    expect(result.summary.totalRiskScore).toBe(42);
+    expect(result.summary.decision).toBe('warn');
+  });
+
+  it('uses custom high-risk threshold for decision boundary', () => {
+    const result = scoreDependencyChanges([baseChange], {
+      thresholds: { warnScore: 25, failScore: 70, highRiskScore: 60 },
+      weights: { vulnerability: 40, installTimeExecution: 20, blastRadius: 15, maintenanceTrust: 15, policy: 10 },
+      deniedPackages: ['bad-package'],
+      deniedLicenses: ['GPL-3.0'],
+      requireInstallScriptReview: true,
+      blockKnownCriticalVulns: false,
+    });
+
+    expect(result.summary.totalRiskScore).toBe(55);
+    expect(result.summary.decision).toBe('warn');
   });
 
   it('fails closed when a critical vulnerability is present and policy blocks it', () => {
@@ -50,7 +78,7 @@ describe('scoreDependencyChanges', () => {
         },
       },
     ], {
-      thresholds: { warnScore: 25, failScore: 70 },
+      thresholds: { warnScore: 25, failScore: 70, highRiskScore: 50 },
       weights: { vulnerability: 40, installTimeExecution: 20, blastRadius: 15, maintenanceTrust: 15, policy: 10 },
       deniedPackages: [],
       deniedLicenses: [],

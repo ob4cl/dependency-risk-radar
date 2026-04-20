@@ -1,9 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { createGitRepoFixture } from '../../../tests/helpers/git-repo';
 
-const repoRoot = '/home/tyler/.openclaw/workspace/drr';
+const testFilePath = fileURLToPath(import.meta.url);
+const testDir = dirname(testFilePath);
+const repoRoot = resolve(testDir, '../../..');
 
 const baseFiles = {
   'package.json': JSON.stringify({ name: 'demo', dependencies: { react: '^18.0.0' } }, null, 2),

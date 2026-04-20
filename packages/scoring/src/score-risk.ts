@@ -4,6 +4,7 @@ export interface ScoringPolicy {
   thresholds: {
     warnScore: number;
     failScore: number;
+    highRiskScore?: number;
   };
   weights: {
     vulnerability: number;
@@ -67,7 +68,7 @@ function hasCriticalVulnerability(vulnerabilities: Array<Record<string, unknown>
 
 function decisionFromScore(score: number, policy: ScoringPolicy): Decision {
   if (score >= policy.thresholds.failScore) return 'fail';
-  if (score >= HIGH_RISK_SCORE) return 'high-risk';
+  if (score >= (policy.thresholds.highRiskScore ?? HIGH_RISK_SCORE)) return 'high-risk';
   if (score >= policy.thresholds.warnScore) return 'warn';
   return 'pass';
 }
@@ -91,6 +92,7 @@ export const defaultScoringPolicy: ScoringPolicy = {
   thresholds: {
     warnScore: WARN_SCORE,
     failScore: FAIL_SCORE,
+    highRiskScore: HIGH_RISK_SCORE,
   },
   weights: {
     vulnerability: 40,
@@ -108,6 +110,10 @@ export const defaultScoringPolicy: ScoringPolicy = {
 export function scoreDependencyChanges(changes: NormalizedDependencyChange[], policy = defaultScoringPolicy): ScoreResult {
   const normalizedPolicy: ScoringPolicy = {
     ...policy,
+    thresholds: {
+      ...policy.thresholds,
+      highRiskScore: policy.thresholds.highRiskScore ?? HIGH_RISK_SCORE,
+    },
     deniedPackages: normalizePolicyList(policy.deniedPackages),
     deniedLicenses: normalizePolicyList(policy.deniedLicenses),
   };

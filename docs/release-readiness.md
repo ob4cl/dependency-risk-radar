@@ -1,13 +1,15 @@
 # Release readiness notes
 
-Dependency Risk Radar v1 uses fixed scoring bands and deterministic report output.
+Dependency Risk Radar v1 uses deterministic report output with policy-configurable scoring.
 
-## Scoring contract
+## Default scoring contract
 
 - 0-24: pass
 - 25-49: warn
 - 50-69: high-risk
 - 70+: fail
+
+These defaults are configurable through policy (`thresholds.*`, `scoring.high_risk_score`, `scoring.weights.*`).
 
 ## Policy contract
 
@@ -27,3 +29,11 @@ Dependency Risk Radar v1 uses fixed scoring bands and deterministic report outpu
 - Keep `warn_score` aligned with the v1 default banding unless a policy override is intentional
 - Update docs/tests whenever scoring bands, weights, or policy inputs change
 - Verify JSON and Markdown outputs remain in sync with the shared analysis result
+
+## External adoption signals checklist (recommended)
+
+- [ ] Create/push a Git tag for every published CLI version
+- [ ] Publish a GitHub Release with user-facing notes for each tag
+- [ ] Keep repository description aligned with current scope (direct dependency delta + transitive impact scoring)
+- [ ] Add and maintain relevant GitHub topics for discovery
+- [ ] Ensure README install/usage examples match the currently published package

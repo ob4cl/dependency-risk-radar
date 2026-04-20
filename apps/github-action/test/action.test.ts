@@ -1,12 +1,15 @@
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import YAML from 'yaml';
 import { createGitRepoFixture } from '../../../tests/helpers/git-repo';
 import { readActionInputs, runAction } from '../src/index';
 
-const repoRoot = '/home/tyler/.openclaw/workspace/drr';
+const testFilePath = fileURLToPath(import.meta.url);
+const testDir = dirname(testFilePath);
+const repoRoot = resolve(testDir, '../../..');
 
 const baseFiles = {
   'package.json': JSON.stringify({ name: 'demo', dependencies: { react: '^18.0.0' } }, null, 2),

@@ -6,7 +6,7 @@ It answers one pre-merge question:
 
 "Does this dependency delta violate our risk policy?"
 
-Instead of generic vulnerability noise, it analyzes the exact dependency change between two refs, scores risk with explicit policy, and returns actionable output for CI and reviewers.
+Instead of generic vulnerability noise, it analyzes direct dependency deltas between two refs (from manifest/lockfile roots), scores transitive impact with explicit policy, and returns actionable output for CI and reviewers.
 
 ## Who this is for
 
@@ -28,10 +28,11 @@ Instead of generic vulnerability noise, it analyzes the exact dependency change 
 Given `base` and `head` refs, Dependency Risk Radar:
 
 1. Parses manifest + lockfile for npm/pnpm
-2. Computes normalized dependency deltas
-3. Optionally enriches metadata/vulnerabilities from providers
-4. Scores risk with policy controls
-5. Produces:
+2. Computes normalized direct dependency deltas from manifest roots
+3. Computes transitive impact signals (blast-radius deltas) per changed direct dependency
+4. Optionally enriches metadata/vulnerabilities from providers
+5. Scores risk with policy controls
+6. Produces:
    - structured JSON for automation
    - Markdown for code review context
    - decision + recommended exit behavior
@@ -60,6 +61,9 @@ Typical interpretation:
 ## Current limitations (v1)
 
 JavaScript/TypeScript dependency workflows only
+Direct dependency deltas are computed from root manifest entries (`package.json` dependencies) plus lockfile resolution
+Transitive analysis is currently impact scoring (reachable-package delta), not a full workspace-wide graph diff
+Current analysis scope is repo-root `package.json` + lockfile, not full multi-workspace manifest discovery
 No SBOM export
 No automated remediation/fix PR generation
 No Python/Rust/Java ecosystem support yet
@@ -148,6 +152,15 @@ thresholds:
   block_score: 70
   warn_score: 25
 
+scoring:
+  high_risk_score: 50
+  weights:
+    vulnerability: 40
+    install_time_execution: 20
+    blast_radius: 15
+    maintenance_trust: 15
+    policy: 10
+
 policies:
   block_known_critical_vulns: true
   require_lockfile: true
@@ -169,11 +182,11 @@ Risk findings are driven by combinations of:
 
 - known vulnerabilities (including critical-vuln blocking policy)
 - install-time execution hooks
-- transitive blast-radius deltas
+- transitive blast-radius deltas (derived from lockfile graph size changes under each changed direct dependency)
 - maintenance-trust signals from metadata
 - explicit package/license policy denies
 
-Thresholds are policy-controlled and auditable.
+Thresholds and scoring weights are policy-controlled and auditable.
 
 ## JSON output contract (example shape)
 
@@ -274,7 +287,7 @@ PR / commit refs (base, head)
             |
             v
       Dependency delta engine
-   (manifest + lockfile parsing)
+   (direct root deps + transitive impact)
             |
             v
    Optional metadata/vuln providers
@@ -375,6 +388,17 @@ This repository includes:
 - `CODEOWNERS`
 - issue and PR templates
 - dependency review and release validation workflows
+
+## Adoption signals and release hygiene (recommended)
+
+For external credibility, maintainers should keep these visible signals up to date:
+
+- [ ] publish Git tags for released versions
+- [ ] create GitHub Releases with notes for each published version
+- [ ] keep repository description concise and specific (what DRR does today)
+- [ ] set relevant GitHub topics (for example: `security`, `supply-chain`, `dependencies`, `ci`)
+- [ ] link package/release artifacts from README and release notes
+- [ ] keep `CHANGELOG.md` aligned with tags/releases
 
 ## Contributing
 
