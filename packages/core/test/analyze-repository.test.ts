@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeRepository } from '@drr/core';
+import { MAX_LOCKFILE_SIZE_BYTES } from '@drr/parsers';
 import { createGitRepoFixture } from '../../../tests/helpers/git-repo';
 
 const baseFiles = {
@@ -37,5 +38,34 @@ describe('analyzeRepository', () => {
     expect(result.dependencyChanges[0]?.name).toBe('react');
     expect(result.markdownReport).toContain('Dependency Risk Radar');
     expect(result.summary.decision).toBe('pass');
+  });
+
+  it('fails closed on oversized lockfiles before parsing the blob body', async () => {
+    const oversizedLockfile = JSON.stringify({
+      name: 'demo',
+      lockfileVersion: 3,
+      packages: {},
+      padding: 'x'.repeat(MAX_LOCKFILE_SIZE_BYTES + 1),
+    });
+    const repo = createGitRepoFixture(baseFiles, {
+      ...headFiles,
+      'package-lock.json': oversizedLockfile,
+    });
+
+    await expect(analyzeRepository({
+      repoPath: repo.repoPath,
+      baseRef: repo.baseRef,
+      headRef: repo.headRef,
+      allowedWorkspaceRoot: repo.repoPath,
+      allowedConfigRoot: repo.repoPath,
+    })).rejects.toMatchObject({
+      code: 'MALFORMED_INPUT',
+      details: {
+        path: expect.stringContaining('/package-lock.json'),
+        blobSizeBytes: expect.any(Number),
+        maxSizeBytes: MAX_LOCKFILE_SIZE_BYTES,
+        ref: repo.headRef,
+      },
+    });
   });
 });

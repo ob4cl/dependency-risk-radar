@@ -2,9 +2,9 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AnalysisInput, FinalAnalysisResult } from '@drr/shared';
-import { MissingLockfileError, InvalidReferenceError, PolicyValidationError } from '@drr/shared';
+import { MissingLockfileError, InvalidReferenceError, PolicyValidationError, MalformedInputError } from '@drr/shared';
 import { assertDirectoryWithinRoots, assertFileWithinRoots, PathUnreadableError } from '@drr/shared';
-import { parsePackageJson, parseLockfile, generateDependencyDelta } from '@drr/parsers';
+import { parsePackageJson, parseLockfile, generateDependencyDelta, MAX_LOCKFILE_SIZE_BYTES } from '@drr/parsers';
 import { parsePolicyYaml, defaultPolicyConfig, policyToScoringConfig } from '@drr/policy';
 import { scoreDependencyChanges } from '@drr/scoring';
 import { renderJsonReport, renderMarkdownReport } from '@drr/reporters';
@@ -44,6 +44,15 @@ function gitShow(repoPath: string, ref: string, filePath: string): string {
   }
 }
 
+function gitBlobSize(repoPath: string, ref: string, filePath: string): number {
+  try {
+    const size = execFileSync('git', ['cat-file', '-s', `${ref}:${filePath}`], { cwd: repoPath, encoding: 'utf8' }).trim();
+    return Number(size);
+  } catch (error) {
+    throw new InvalidReferenceError(ref, { filePath, error: error instanceof Error ? error.message : String(error) });
+  }
+}
+
 function gitFileExists(repoPath: string, ref: string, filePath: string): boolean {
   try {
     execFileSync('git', ['cat-file', '-e', `${ref}:${filePath}`], { cwd: repoPath, stdio: 'ignore' });
@@ -76,6 +85,17 @@ function safeParseManifest(repoPath: string, ref: string) {
 
 function safeParseLockfile(repoPath: string, ref: string, lockfilePath: string | null) {
   if (!lockfilePath) return null;
+
+  const blobSizeBytes = gitBlobSize(repoPath, ref, lockfilePath);
+  if (blobSizeBytes > MAX_LOCKFILE_SIZE_BYTES) {
+    throw new MalformedInputError(`Lockfile exceeds maximum supported size at ${join(repoPath, lockfilePath)}`, {
+      path: join(repoPath, lockfilePath),
+      blobSizeBytes,
+      maxSizeBytes: MAX_LOCKFILE_SIZE_BYTES,
+      ref,
+    });
+  }
+
   const text = gitShow(repoPath, ref, lockfilePath);
   return parseLockfile(text, join(repoPath, lockfilePath));
 }

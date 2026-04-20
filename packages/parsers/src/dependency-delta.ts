@@ -111,16 +111,28 @@ function rootDependencyVersion(lockfile: ParsedLockfile | null, name: string): s
   return node ? normalizeVersion(node.version) : null;
 }
 
-function countReachablePackages(lockfile: ParsedLockfile, node: LockfilePackageNode, seen = new Set<string>()): number {
-  if (seen.has(node.id)) return 0;
-  seen.add(node.id);
-  let total = 1;
-  for (const [depName, depVersion] of Object.entries(node.dependencies)) {
-    const child = resolveNode(lockfile, depName, depVersion, node.id);
-    if (child && !seen.has(child.id)) {
-      total += countReachablePackages(lockfile, child, seen);
+function countReachablePackages(lockfile: ParsedLockfile, node: LockfilePackageNode): number {
+  const seen = new Set<string>();
+  const stack: LockfilePackageNode[] = [node];
+  let total = 0;
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current || seen.has(current.id)) {
+      continue;
+    }
+
+    seen.add(current.id);
+    total += 1;
+
+    for (const [depName, depVersion] of Object.entries(current.dependencies)) {
+      const child = resolveNode(lockfile, depName, depVersion, current.id);
+      if (child && !seen.has(child.id)) {
+        stack.push(child);
+      }
     }
   }
+
   return total;
 }
 
