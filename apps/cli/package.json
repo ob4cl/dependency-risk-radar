@@ -46,7 +46,7 @@
     "release:version:major": "npm version major --no-git-tag-version"
   },
   "dependencies": {
-    "commander": "^12.1.0"
+    "commander": "^14.0.3"
   },
   "devDependencies": {
     "esbuild": "0.28.0"
