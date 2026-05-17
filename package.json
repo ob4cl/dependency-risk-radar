@@ -22,7 +22,7 @@
     "commander": "^14.0.3",
     "eslint": "^10.2.1",
     "globals": "^17.5.0",
-    "tsx": "^4.20.5",
+    "tsx": "^4.22.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.39.0",
     "vitest": "^4.1.4",
